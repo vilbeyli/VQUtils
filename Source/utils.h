@@ -1,5 +1,5 @@
-//	VQEngine | DirectX11 Renderer
-//	Copyright(C) 2018  - Volkan Ilbeyli
+//	VQUtils 
+//	Copyright(C) 2020  - Volkan Ilbeyli
 //
 //	This program is free software : you can redistribute it and / or modify
 //	it under the terms of the GNU General Public License as published by
@@ -44,20 +44,7 @@ namespace StrUtil
 
 	std::string  CommaSeparatedNumber(const std::string& num);
 
-	inline std::string  UnicodeToASCII(const PWSTR pwstr) 
-	{ 
-		const std::wstring wstr(pwstr); 
-#if _WIN32
-		// https://codingtidbit.com/2020/02/09/c17-codecvt_utf8-is-deprecated/
-		if (wstr.empty()) return std::string();
-		int size_needed = WideCharToMultiByte(CP_UTF8, 0, &wstr[0], (int)wstr.size(), NULL, 0, NULL, NULL);
-		std::string strTo(size_needed, 0);
-		WideCharToMultiByte(CP_UTF8, 0, &wstr[0], (int)wstr.size(), &strTo[0], size_needed, NULL, NULL);
-		return strTo;
-#else
-		return std::string(wstr.begin(), wstr.end());  // results in warning in C++17
-#endif
-	}
+	       std::string  UnicodeToASCII(const PWSTR pwstr); // https://codingtidbit.com/2020/02/09/c17-codecvt_utf8-is-deprecated/
 	inline std::wstring ASCIIToUnicode(const std::string& str) { return std::wstring(str.begin(), str.end()); }
 }
 

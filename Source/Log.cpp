@@ -81,6 +81,7 @@ void CreateFolderHierarchy(const std::string& logfileDir, std::string& errMsg)
 	std::vector<std::string> folders = StrUtil::split(logfileDir, {'/', '\\'});
 	const std::string root = folders[0];
 
+	assert(folders.size() > 1); // assume a root path like 'C:/' is not given
 	folders = std::vector<std::string>(folders.begin() + 1, folders.end());
 
 	std::string folderAbsolutePath = root + "/";
@@ -111,7 +112,7 @@ void InitLogFile(const char* pStrFilePath)
 	sOutFile.open(logfileAbsolutePath);
 	if (sOutFile)
 	{
-		std::string msg = GetCurrentTimeAsStringWithBrackets() + "[Log] " + "Logging initialized: " + logfileAbsolutePath;
+		std::string msg = GetCurrentTimeAsStringWithBrackets() + "[Log] " + "Logging initialized: " + logfileAbsolutePath  + "\n";
 		sOutFile << msg;
 		cout << msg << endl;
 	}
