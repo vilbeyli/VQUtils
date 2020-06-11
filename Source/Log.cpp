@@ -30,14 +30,15 @@
 #include <Windows.h>
 
 // Calls error/warning/info with "Test" right after initialization
-#define LOG_RUN_UNIT_TEST 1
+#define LOG_RUN_UNIT_TEST 0
 
 #define MAX_CONSOLE_LINES 500
 
 namespace Log
 {
 using namespace std;
-	
+
+constexpr char* VQ_DEFAULT_LOGFILE_NAME = "VQLog.txt";
 static std::ofstream sOutFile;
 
 // checks if the specifiec path is only a file name, construct absolute path
@@ -47,8 +48,10 @@ static std::ofstream sOutFile;
 //    - if relative, use CurrentPath + provided path as final path
 std::string ParseAndValidateArgument(const char* pStrFilePath)
 {
-	const std::string LogFileDir = pStrFilePath;
+	const std::string LogFileDir = strlen(pStrFilePath) == 0 ? VQ_DEFAULT_LOGFILE_NAME : pStrFilePath;
 	const std::string CurrPath = DirectoryUtil::GetCurrentPath();
+
+	const bool bNoFilePathProvided = LogFileDir.empty();
 
 	const std::vector<std::string> LogFileDirTokens = StrUtil::split(LogFileDir, { '/', '\\' });
 	const std::string& root = LogFileDirTokens[0];
