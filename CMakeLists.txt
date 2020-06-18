@@ -9,11 +9,13 @@ add_compile_options(/std:c++17)
 set (Headers
     "Source/Log.h"
     "Source/utils.h"
+    "Source/Multithreading.h"
 )
 
 set (Source
     "Source/Log.cpp"
     "Source/utils.cpp"
+    "Source/Multithreading.cpp"
 )
 
 # set ouput directory
