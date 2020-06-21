@@ -10,12 +10,14 @@ set (Headers
     "Source/Log.h"
     "Source/utils.h"
     "Source/Multithreading.h"
+    "Source/SystemInfo.h"
 )
 
 set (Source
     "Source/Log.cpp"
     "Source/utils.cpp"
     "Source/Multithreading.cpp"
+    "Source/SystemInfo.cpp"
 )
 
 # set ouput directory
