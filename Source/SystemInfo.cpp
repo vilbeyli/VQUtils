@@ -29,8 +29,9 @@
 #include <cassert>
 #include <array>
 
+#if 0 // TODO: multiple definitions breaks the assembly, vector.push_back() doesn't populate the vector...
 // Utility: Unicode -> ASCII Conversion
-// // https://codingtidbit.com/2020/02/09/c17-codecvt_utf8-is-deprecated/
+// https://codingtidbit.com/2020/02/09/c17-codecvt_utf8-is-deprecated/
 static std::string UnicodeToASCII(const PWSTR pwstr)
 {
 	const std::wstring wstr(pwstr);
@@ -52,7 +53,10 @@ static std::string UnicodeToASCII(const WCHAR wchars[STR_SIZE])
 	wcstombs_s(&numCharsConverted, ascii, wchars, STR_SIZE);
 	return std::string(ascii);
 }
-
+#else // depend on utils.h for now.
+#include "utils.h"
+using namespace StrUtil;
+#endif
 
 // src: https://docs.microsoft.com/en-us/windows/win32/api/sysinfoapi/nf-sysinfoapi-getlogicalprocessorinformation
 // Helper function to count set bits in the processor mask.
@@ -117,6 +121,27 @@ std::vector<FMonitorInfo> GetDisplayInfo()
 {
 	std::vector<FMonitorInfo> monitors;
 
+	auto fnFindBestMode = [](const std::vector<FMonitorInfo::FMode>& modes)
+	{
+		FMonitorInfo::FMode bestMode = {};
+
+		// find highest supported refresh rate
+		for (const FMonitorInfo::FMode& mode : modes)
+			if (mode.RefreshRate > bestMode.RefreshRate) 
+				bestMode.RefreshRate = mode.RefreshRate;
+
+		// find the highest resolution supported by the highest refresh rate
+		for (const FMonitorInfo::FMode& mode : modes)
+		{
+			if (mode.RefreshRate != bestMode.RefreshRate)
+				continue;
+			if (bestMode.Resolution.Width <= mode.Resolution.Width && bestMode.Resolution.Height <= mode.Resolution.Height)
+				bestMode.Resolution = mode.Resolution;
+		}
+
+		return bestMode;
+	};
+
 	//
 	// Get supported modes (refresh rate + resolution)
 	//
@@ -137,6 +162,9 @@ std::vector<FMonitorInfo> GetDisplayInfo()
 
 		int iModeNum = 0;
 		DEVMODEA mode;
+		FMonitorInfo::FMode highestMode = { };
+		highestMode.RefreshRate = 0;
+		highestMode.Resolution = { 0, 0 };
 		while (EnumDisplaySettings(device_interface.DeviceName, iModeNum, &mode))
 		{
 			FMonitorInfo::FMode fmode;
@@ -147,6 +175,7 @@ std::vector<FMonitorInfo> GetDisplayInfo()
 			++iModeNum;
 		}
 		i.DeviceName = device.DeviceName;
+		i.HighestMode = fnFindBestMode(i.SupportedModes);
 
 		monitors.push_back(i);
 		++iDevNum;
@@ -217,6 +246,7 @@ std::vector<FMonitorInfo> GetDisplayInfo()
 
 			++iMonitor;
 			pOut->Release();
+			pOutput->Release();
 		}
 
 

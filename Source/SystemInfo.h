@@ -58,9 +58,9 @@ namespace VQSystemInfo
 
 		/* TODO */ bool           IsAMD() const;
 		/* TODO */ bool           IsIntel() const;
-		/* TODO */ unsigned short GetDCacheSize(short Level);
-		/* TODO */ unsigned short GetDCacheLineSize(short Level);
-		/* TODO */ unsigned short GetICacheSize();
+		/* TODO */ unsigned short GetDCacheSize(short Level) const;
+		/* TODO */ unsigned short GetDCacheLineSize(short Level) const;
+		/* TODO */ unsigned short GetICacheSize() const;
 	};
 	
 
@@ -89,6 +89,7 @@ namespace VQSystemInfo
 		//IDXGIOutput*       pDXGIOut; // TODO: memory management? take in as param?
 		unsigned           RotationDegrees;
 		std::vector<FMode> SupportedModes;
+		FMode              HighestMode;
 	};
 
 	struct FRAMInfo
