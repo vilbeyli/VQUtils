@@ -103,6 +103,14 @@ private:
 	mutable std::mutex mutex; // https://stackoverflow.com/a/25521702/2034041
 	std::queue<Task> queue;
 };
+template<class T>
+inline void TaskQueue::AddTask(std::shared_ptr<T>& pTask)
+{
+	std::unique_lock<std::mutex> lock(mutex);
+	queue.emplace([=]() { (*pTask)(); });
+	++activeTasks;
+}
+
 
 
 //
@@ -155,13 +163,6 @@ private:
 	TaskQueue                mTaskQueue;
 	std::vector<std::thread> mWorkers;
 };
-template<class T>
-inline void TaskQueue::AddTask(std::shared_ptr<T>& pTask)
-{
-	std::unique_lock<std::mutex> lock(mutex);
-	queue.emplace([=]() { (*pTask)(); });
-	++activeTasks;
-}
 
 
 // --------------------------------------------------------------------------------------------------------------------------------------
@@ -184,10 +185,14 @@ template<class TContainer, class TItem>
 class BufferedContainer
 {
 public:
-	//TContainer& GetFrontContainer() const { return mBufferPool[iBuffer]; }
 	TContainer& GetBackContainer() { return mBufferPool[(iBuffer + 1) % 2]; }
 	const TContainer& GetBackContainer() const { return mBufferPool[(iBuffer+1)%2]; }
-
+	
+	void AddItem(TItem&& item)
+	{
+		std::unique_lock<std::mutex> lk(mMtx);
+		mBufferPool[iBuffer].emplace(std::forward<TItem&&>(item));
+	}
 	void AddItem(const TItem& item)
 	{
 		std::unique_lock<std::mutex> lk(mMtx);
