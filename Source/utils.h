@@ -42,6 +42,9 @@ namespace StrUtil
 		return split(s, delimiters);
 	}
 
+	void MakeLowercase(std::string& str);
+	std::string GetLowercased(const std::string& str);
+
 	std::string  CommaSeparatedNumber(const std::string& num);
 
 	       std::string  UnicodeToASCII(const PWSTR pwstr); // https://codingtidbit.com/2020/02/09/c17-codecvt_utf8-is-deprecated/

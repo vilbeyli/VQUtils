@@ -104,6 +104,18 @@ namespace StrUtil
 		return result;
 	}
 
+	void MakeLowercase(std::string& str)
+	{
+		std::transform(str.begin(), str.end(), str.begin(), [](unsigned char c) { return std::tolower(c); });
+	}
+
+	std::string GetLowercased(const std::string& str)
+	{
+		std::string lowercased(str.size(), '\0');
+		std::transform(str.begin(), str.end(), lowercased.begin(), [](unsigned char c) { return std::tolower(c); });
+		return lowercased;
+	}
+
 	std::string CommaSeparatedNumber(const std::string& num)
 	{
 		std::string _num = "";
