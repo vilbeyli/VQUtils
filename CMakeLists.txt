@@ -18,6 +18,7 @@ set (Headers
     "Source/Multithreading.h"
     "Source/SystemInfo.h"
     "Source/Image.h"
+    "Source/Timer.h"
 )
 
 set (Source
@@ -26,6 +27,7 @@ set (Source
     "Source/Multithreading.cpp"
     "Source/SystemInfo.cpp"
     "Source/Image.cpp"
+    "Source/Timer.cpp"
 )
 
 source_group("Libs"   FILES ${Lib_headers})
