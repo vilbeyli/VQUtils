@@ -79,6 +79,7 @@ namespace VQSystemInfo
 	//
 	struct FColorSpace
 	{
+		FColorSpace() = default;
 		FColorSpace(const DXGI_OUTPUT_DESC1& d)
 			: RedPrimaryXY  { d.RedPrimary[0]  , d.RedPrimary[1]   }
 			, BluePrimaryXY { d.BluePrimary[0] , d.BluePrimary[1]  }
@@ -94,6 +95,7 @@ namespace VQSystemInfo
 	};
 	struct FDisplayBrightnessValues
 	{
+		FDisplayBrightnessValues() = default;
 		FDisplayBrightnessValues(const DXGI_OUTPUT_DESC1& d) 
 			: MinLuminance(d.MinLuminance)
 			, MaxLuminance(d.MaxLuminance)
