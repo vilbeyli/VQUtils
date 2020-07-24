@@ -243,6 +243,8 @@ std::vector<FMonitorInfo> GetDisplayInfo()
 
 			i.NativeResolution = { desc.DesktopCoordinates.right - desc.DesktopCoordinates.left, desc.DesktopCoordinates.bottom - desc.DesktopCoordinates.top };
 			i.bSupportsHDR = desc.ColorSpace == DXGI_COLOR_SPACE_RGB_FULL_G2084_NONE_P2020;
+			i.ColorSpace = FColorSpace(desc);
+			i.BrightnessValues = FDisplayBrightnessValues(desc);
 
 			++iMonitor;
 			pOut->Release();
@@ -288,7 +290,7 @@ std::vector<FGPUInfo> GetGPUInfo(/*TODO: feature level*/)
 		FGPUInfo GPUInfo = {};
 		GPUInfo.DedicatedGPUMemory = desc.DedicatedVideoMemory;
 		GPUInfo.DeviceID = desc.DeviceId;
-		GPUInfo.DeviceName = UnicodeToASCII<_countof(desc.Description)>(desc.Description);
+		//GPUInfo.DeviceName = UnicodeToASCII<_countof(desc.Description)>(desc.Description);
 		GPUInfo.VendorID = desc.VendorId;
 		///GPUInfo.MaxSupportedFeatureLevel = FEATURE_LEVEL;
 		pAdapter->QueryInterface(IID_PPV_ARGS(&GPUInfo.pAdapter));

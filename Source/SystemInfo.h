@@ -18,24 +18,21 @@
 
 #pragma once
 
-#ifndef VQUTILS_SYSTEMINFO_INCLUDE_D3D12
-#define VQUTILS_SYSTEMINFO_INCLUDE_D3D12 0
-#endif
-
-#if VQUTILS_SYSTEMINFO_INCLUDE_D3D12 
 #include <d3d12.h>
-#endif
-
 #include <string>
 #include <vector>
+#include <dxgi1_6.h>
+#include <array>
 
 // fwd decls
 struct IDXGIOutput;
 struct IDXGIAdapter1;
 
-
 namespace VQSystemInfo
 {
+	//
+	// CPU
+	// 
 	struct FCacheInfo
 	{
 		enum ECacheType { INSTRUCTION, DATA, UNIFIED, TRACE };
@@ -44,7 +41,6 @@ namespace VQSystemInfo
 		unsigned long CacheSize;
 		ECacheType Type;
 	};
-
 	struct FCPUInfo
 	{
 		std::string ManufacturerName;
@@ -63,7 +59,9 @@ namespace VQSystemInfo
 		/* TODO */ unsigned short GetICacheSize() const;
 	};
 	
-
+	//
+	// GPU
+	//
 	struct FGPUInfo
 	{
 		std::string    ManufacturerName;
@@ -72,24 +70,53 @@ namespace VQSystemInfo
 		unsigned       VendorID;
 		size_t         DedicatedGPUMemory;
 		IDXGIAdapter1* pAdapter;
-#if VQUTILS_SYSTEMINFO_INCLUDE_D3D12
 		D3D_FEATURE_LEVEL MaxSupportedFeatureLevel; // todo: bool d3d12_0 ?
-#endif
 	};
 
+
+	//
+	// MONITOR
+	//
+	struct FColorSpace
+	{
+		FColorSpace(const DXGI_OUTPUT_DESC1& d)
+			: RedPrimaryXY  { d.RedPrimary[0]  , d.RedPrimary[1]   }
+			, BluePrimaryXY { d.BluePrimary[0] , d.BluePrimary[1]  }
+			, GreenPrimaryXY{ d.GreenPrimary[0], d.GreenPrimary[1] }
+			, WhitePointXY  { d.WhitePoint[0]  , d.WhitePoint[1]   }
+		{}
+
+		// XY space coordinates of RGB primaries
+		std::array<float, 2> RedPrimaryXY;
+		std::array<float, 2> GreenPrimaryXY;
+		std::array<float, 2> BluePrimaryXY;
+		std::array<float, 2> WhitePointXY;
+	};
+	struct FDisplayBrightnessValues
+	{
+		FDisplayBrightnessValues(const DXGI_OUTPUT_DESC1& d) 
+			: MinLuminance(d.MinLuminance)
+			, MaxLuminance(d.MaxLuminance)
+			, MaxFullFrameLuminance(d.MaxFullFrameLuminance)
+		{}
+		float MinLuminance;
+		float MaxLuminance;
+		float MaxFullFrameLuminance;
+	};
 	struct FMonitorInfo
 	{
 		struct FResolution { int Width, Height; };
 		struct FMode       { FResolution Resolution;  unsigned RefreshRate; };
 
-		//std::string        ManufacturerName; // TODO: use WMI or remove field
-		std::string        DeviceName;
-		FResolution        NativeResolution;
-		bool               bSupportsHDR;
-		//IDXGIOutput*       pDXGIOut; // TODO: memory management? take in as param?
-		unsigned           RotationDegrees;
-		std::vector<FMode> SupportedModes;
-		FMode              HighestMode;
+		//std::string              ManufacturerName; // TODO: use WMI or remove field
+		std::string              DeviceName;
+		FResolution              NativeResolution;
+		bool                     bSupportsHDR;
+		unsigned                 RotationDegrees;
+		std::vector<FMode>       SupportedModes;
+		FMode                    HighestMode;
+		FColorSpace              ColorSpace;
+		FDisplayBrightnessValues BrightnessValues;
 	};
 
 	struct FRAMInfo
