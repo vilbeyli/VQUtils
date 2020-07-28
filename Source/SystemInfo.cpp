@@ -19,6 +19,7 @@
 #define NOMINMAX
 
 #include "SystemInfo.h"
+#include "utils.h"
 
 #include <Windows.h>
 #include <dxgi1_6.h>
@@ -34,36 +35,8 @@
 #include "Log.h"
 #endif
 
-constexpr bool READ_REGISTRY_FOR_DISPLAY_DEVICE_NAME = true;
-
-#if 0 // TODO: multiple definitions breaks the assembly, vector.push_back() doesn't populate the vector...
-// Utility: Unicode -> ASCII Conversion
-// https://codingtidbit.com/2020/02/09/c17-codecvt_utf8-is-deprecated/
-static std::string UnicodeToASCII(const PWSTR pwstr)
-{
-	const std::wstring wstr(pwstr);
-#if _WIN32
-	if (wstr.empty()) return std::string();
-	int size_needed = WideCharToMultiByte(CP_UTF8, 0, &wstr[0], (int)wstr.size(), NULL, 0, NULL, NULL);
-	std::string strTo(size_needed, 0);
-	WideCharToMultiByte(CP_UTF8, 0, &wstr[0], (int)wstr.size(), &strTo[0], size_needed, NULL, NULL);
-	return strTo;
-#else
-	return std::string(wstr.begin(), wstr.end());  // results in warning in C++17
-#endif
-}
-template<unsigned STR_SIZE>
-static std::string UnicodeToASCII(const WCHAR wchars[STR_SIZE])
-{
-	char ascii[STR_SIZE];
-	size_t numCharsConverted = 0;
-	wcstombs_s(&numCharsConverted, ascii, wchars, STR_SIZE);
-	return std::string(ascii);
-}
-#else // depend on utils.h for now.
-#include "utils.h"
-using namespace StrUtil;
-#endif
+constexpr bool DISPLAY_DEVICE_NAME__READ_REGISTRY = true;         // Reading EDID is slow, especially on Debug (>1s / monitor)
+constexpr bool DISPLAY_DEVICE_NAME__USE_DISPLAY_INFO_API = false; // TODO: finalize implementation
 
 // src: https://docs.microsoft.com/en-us/windows/win32/api/sysinfoapi/nf-sysinfoapi-getlogicalprocessorinformation
 // Helper function to count set bits in the processor mask.
@@ -79,8 +52,6 @@ static DWORD CountSetBits(ULONG_PTR bitMask)
 	}
 	return bitSetCount;
 }
-
-
 
 namespace VQSystemInfo
 {
@@ -125,99 +96,6 @@ FRAMInfo GetRAMInfo()
 // Monitor
 //
 // https://docs.microsoft.com/en-us/windows/win32/sysinfo/enumerating-registry-subkeys
-static void QueryKey(HKEY hKey) 
-{
-#define MAX_KEY_LENGTH 255
-#define MAX_VALUE_NAME 16383
-    TCHAR    achKey[MAX_KEY_LENGTH];   // buffer for subkey name
-    DWORD    cbName;                   // size of name string 
-    TCHAR    achClass[MAX_PATH] = TEXT("");  // buffer for class name 
-    DWORD    cchClassName = MAX_PATH;  // size of class string 
-    DWORD    cSubKeys=0;               // number of subkeys 
-    DWORD    cbMaxSubKey;              // longest subkey size 
-    DWORD    cchMaxClass;              // longest class string 
-    DWORD    cValues;              // number of values for keyPath 
-    DWORD    cchMaxValue;          // longest value name 
-    DWORD    cbMaxValueData;       // longest value data 
-    DWORD    cbSecurityDescriptor; // size of security descriptor 
-    FILETIME ftLastWriteTime;      // last write time 
- 
-    DWORD i, retCode; 
- 
-    TCHAR  achValue[MAX_VALUE_NAME]; 
-    DWORD cchValue = MAX_VALUE_NAME; 
- 
-    // Get the class name and the value count. 
-    retCode = RegQueryInfoKey(
-        hKey,                    // keyPath handle 
-        achClass,                // buffer for class name 
-        &cchClassName,           // size of class string 
-        NULL,                    // reserved 
-        &cSubKeys,               // number of subkeys 
-        &cbMaxSubKey,            // longest subkey size 
-        &cchMaxClass,            // longest class string 
-        &cValues,                // number of values for this keyPath 
-        &cchMaxValue,            // longest value name 
-        &cbMaxValueData,         // longest value data 
-        &cbSecurityDescriptor,   // security descriptor 
-        &ftLastWriteTime);       // last write time 
- 
-    // Enumerate the subkeys, until RegEnumKeyEx fails.
-    
-    if (cSubKeys)
-    {
-#if VERBOSE_LOGGING
-        Log::Info( "\nNumber of subkeys: %d\n", cSubKeys);
-#endif
-
-        for (i=0; i<cSubKeys; i++) 
-        { 
-            cbName = MAX_KEY_LENGTH;
-            retCode = RegEnumKeyEx(hKey, i,
-                     achKey, 
-                     &cbName, 
-                     NULL, 
-                     NULL, 
-                     NULL, 
-                     &ftLastWriteTime); 
-            if (retCode == ERROR_SUCCESS) 
-            {
-#if VERBOSE_LOGGING
-				Log::Info(TEXT("(%d) %s\n"), i+1, achKey);
-#endif
-            }
-        }
-    } 
- 
-    // Enumerate the keyPath values. 
-
-    if (cValues) 
-    {
-#if VERBOSE_LOGGING
-        Log::Info( "\nNumber of values: %d\n", cValues);
-#endif
-
-        for (i=0, retCode=ERROR_SUCCESS; i<cValues; i++) 
-        { 
-            cchValue = MAX_VALUE_NAME; 
-            achValue[0] = '\0'; 
-            retCode = RegEnumValue(hKey, i, 
-                achValue, 
-                &cchValue, 
-                NULL, 
-                NULL,
-                NULL,
-                NULL);
- 
-            if (retCode == ERROR_SUCCESS ) 
-            {
-#if VERBOSE_LOGGING
-				Log::Info(TEXT("(%d) %s\n"), i+1, achValue);
-#endif
-            } 
-        }
-    }
-}
 static std::vector<std::string> GetSubKeys(HKEY hkey)
 {
 	std::vector<std::string> SubKeys;
@@ -632,7 +510,7 @@ std::vector<FMonitorInfo> GetDisplayInfo()
 			++iModeNum;
 		}
 
-		if constexpr (READ_REGISTRY_FOR_DISPLAY_DEVICE_NAME)
+		if constexpr (DISPLAY_DEVICE_NAME__READ_REGISTRY)
 		{
 			constexpr char* DISPLAY_NAME_ENUMS_REGISTRY_PATH_FROM_HKEY_LOCAL_MACHINE = "SYSTEM\\CurrentControlSet\\Enum\\DISPLAY";
 			// Here in the registry root, we'll see part of device.DisplayID as folders, e.g.
@@ -654,6 +532,11 @@ std::vector<FMonitorInfo> GetDisplayInfo()
 
 			// Finally, EDID string might contain newlines and spaces after the string ends so process it here
 			i.DeviceName = StrUtil::trim(i.DeviceName);
+		}
+		else if constexpr (DISPLAY_DEVICE_NAME__USE_DISPLAY_INFO_API)
+		{
+			// TODO: figure out how to use the UWP library
+			//Windows::Devices::Display::DisplayMonitor;
 		}
 		else
 		{
@@ -718,7 +601,10 @@ std::vector<FMonitorInfo> GetDisplayInfo()
 			pOut->GetDesc1(&desc);
 
 			FMonitorInfo& i = monitors[iMonitor];
-			i.DeviceName = UnicodeToASCII(desc.DeviceName);
+			if constexpr (!DISPLAY_DEVICE_NAME__READ_REGISTRY)
+			{
+				i.DeviceName = StrUtil::UnicodeToASCII(desc.DeviceName);
+			}
 			switch (desc.Rotation)
 			{
 			case DXGI_MODE_ROTATION_IDENTITY   : i.RotationDegrees = 0; break;
@@ -808,7 +694,7 @@ std::vector<FGPUInfo> GetGPUInfo(/*TODO: feature level*/)
 		}
 		else
 		{
-			const std::string AdapterDesc = UnicodeToASCII(desc.Description);
+			const std::string AdapterDesc = StrUtil::UnicodeToASCII(desc.Description);
 			//Log::Warning("Device::Create(): D3D12CreateDevice() with Feature Level 12_1 failed with adapter=%s, retrying with Feature Level 12_0", AdapterDesc.c_str());
 			hr = D3D12CreateDevice(pAdapter, D3D_FEATURE_LEVEL_12_0, _uuidof(ID3D12Device), nullptr);
 			if (SUCCEEDED(hr))
