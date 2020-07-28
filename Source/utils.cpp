@@ -104,6 +104,12 @@ namespace StrUtil
 		return result;
 	}
 
+	std::string trim(const std::string& s)
+	{
+		size_t end = s.find_last_not_of(" \n\r\t\f\v");
+		return (end == std::string::npos) ? "" : s.substr(0, end+1);
+	}
+
 	void MakeLowercase(std::string& str)
 	{
 		std::transform(str.begin(), str.end(), str.begin(), [](unsigned char c) { return std::tolower(c); });

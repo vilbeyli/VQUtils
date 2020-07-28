@@ -47,6 +47,7 @@ namespace StrUtil
 		const std::vector<char> delimiters = { args... };
 		return split(s, delimiters);
 	}
+	std::string trim(const std::string& s);
 
 	void MakeLowercase(std::string& str);
 	std::string GetLowercased(const std::string& str);
