@@ -29,6 +29,13 @@
 #include <cassert>
 #include <array>
 
+#define VERBOSE_LOGGING 0
+#if VERBOSE_LOGGING
+#include "Log.h"
+#endif
+
+constexpr bool READ_REGISTRY_FOR_DISPLAY_DEVICE_NAME = true;
+
 #if 0 // TODO: multiple definitions breaks the assembly, vector.push_back() doesn't populate the vector...
 // Utility: Unicode -> ASCII Conversion
 // https://codingtidbit.com/2020/02/09/c17-codecvt_utf8-is-deprecated/
@@ -117,6 +124,456 @@ FRAMInfo GetRAMInfo()
 //
 // Monitor
 //
+// https://docs.microsoft.com/en-us/windows/win32/sysinfo/enumerating-registry-subkeys
+static void QueryKey(HKEY hKey) 
+{
+#define MAX_KEY_LENGTH 255
+#define MAX_VALUE_NAME 16383
+    TCHAR    achKey[MAX_KEY_LENGTH];   // buffer for subkey name
+    DWORD    cbName;                   // size of name string 
+    TCHAR    achClass[MAX_PATH] = TEXT("");  // buffer for class name 
+    DWORD    cchClassName = MAX_PATH;  // size of class string 
+    DWORD    cSubKeys=0;               // number of subkeys 
+    DWORD    cbMaxSubKey;              // longest subkey size 
+    DWORD    cchMaxClass;              // longest class string 
+    DWORD    cValues;              // number of values for keyPath 
+    DWORD    cchMaxValue;          // longest value name 
+    DWORD    cbMaxValueData;       // longest value data 
+    DWORD    cbSecurityDescriptor; // size of security descriptor 
+    FILETIME ftLastWriteTime;      // last write time 
+ 
+    DWORD i, retCode; 
+ 
+    TCHAR  achValue[MAX_VALUE_NAME]; 
+    DWORD cchValue = MAX_VALUE_NAME; 
+ 
+    // Get the class name and the value count. 
+    retCode = RegQueryInfoKey(
+        hKey,                    // keyPath handle 
+        achClass,                // buffer for class name 
+        &cchClassName,           // size of class string 
+        NULL,                    // reserved 
+        &cSubKeys,               // number of subkeys 
+        &cbMaxSubKey,            // longest subkey size 
+        &cchMaxClass,            // longest class string 
+        &cValues,                // number of values for this keyPath 
+        &cchMaxValue,            // longest value name 
+        &cbMaxValueData,         // longest value data 
+        &cbSecurityDescriptor,   // security descriptor 
+        &ftLastWriteTime);       // last write time 
+ 
+    // Enumerate the subkeys, until RegEnumKeyEx fails.
+    
+    if (cSubKeys)
+    {
+#if VERBOSE_LOGGING
+        Log::Info( "\nNumber of subkeys: %d\n", cSubKeys);
+#endif
+
+        for (i=0; i<cSubKeys; i++) 
+        { 
+            cbName = MAX_KEY_LENGTH;
+            retCode = RegEnumKeyEx(hKey, i,
+                     achKey, 
+                     &cbName, 
+                     NULL, 
+                     NULL, 
+                     NULL, 
+                     &ftLastWriteTime); 
+            if (retCode == ERROR_SUCCESS) 
+            {
+#if VERBOSE_LOGGING
+				Log::Info(TEXT("(%d) %s\n"), i+1, achKey);
+#endif
+            }
+        }
+    } 
+ 
+    // Enumerate the keyPath values. 
+
+    if (cValues) 
+    {
+#if VERBOSE_LOGGING
+        Log::Info( "\nNumber of values: %d\n", cValues);
+#endif
+
+        for (i=0, retCode=ERROR_SUCCESS; i<cValues; i++) 
+        { 
+            cchValue = MAX_VALUE_NAME; 
+            achValue[0] = '\0'; 
+            retCode = RegEnumValue(hKey, i, 
+                achValue, 
+                &cchValue, 
+                NULL, 
+                NULL,
+                NULL,
+                NULL);
+ 
+            if (retCode == ERROR_SUCCESS ) 
+            {
+#if VERBOSE_LOGGING
+				Log::Info(TEXT("(%d) %s\n"), i+1, achValue);
+#endif
+            } 
+        }
+    }
+}
+static std::vector<std::string> GetSubKeys(HKEY hkey)
+{
+	std::vector<std::string> SubKeys;
+#define MAX_KEY_LENGTH 255
+#define MAX_VALUE_NAME 16383
+	TCHAR    achKey[MAX_KEY_LENGTH];   // buffer for subkey name
+	DWORD    cbName;                   // size of name string 
+	TCHAR    achClass[MAX_PATH] = TEXT("");  // buffer for class name 
+	DWORD    cchClassName = MAX_PATH;  // size of class string 
+	DWORD    cSubKeys = 0;               // number of subkeys 
+	DWORD    cbMaxSubKey;              // longest subkey size 
+	DWORD    cchMaxClass;              // longest class string 
+	DWORD    cValues;              // number of values for keyPath 
+	DWORD    cchMaxValue;          // longest value name 
+	DWORD    cbMaxValueData;       // longest value data 
+	DWORD    cbSecurityDescriptor; // size of security descriptor 
+	FILETIME ftLastWriteTime;      // last write time 
+
+	DWORD i, retCode;
+
+	TCHAR  achValue[MAX_VALUE_NAME];
+	DWORD cchValue = MAX_VALUE_NAME;
+
+	// Get the class name and the value count. 
+	retCode = RegQueryInfoKey(
+		hkey,                    // keyPath handle 
+		achClass,                // buffer for class name 
+		&cchClassName,           // size of class string 
+		NULL,                    // reserved 
+		&cSubKeys,               // number of subkeys 
+		&cbMaxSubKey,            // longest subkey size 
+		&cchMaxClass,            // longest class string 
+		&cValues,                // number of values for this keyPath 
+		&cchMaxValue,            // longest value name 
+		&cbMaxValueData,         // longest value data 
+		&cbSecurityDescriptor,   // security descriptor 
+		&ftLastWriteTime);       // last write time 
+
+
+	// Enumerate the subkeys, until RegEnumKeyEx fails.
+	if (cSubKeys)
+	{
+		//Log::Info("\nNumber of subkeys: %d\n", cSubKeys);
+		for (i = 0; i < cSubKeys; i++)
+		{
+			cbName = MAX_KEY_LENGTH;
+			retCode = RegEnumKeyEx(hkey, i,
+				achKey,
+				&cbName,
+				NULL,
+				NULL,
+				NULL,
+				&ftLastWriteTime);
+			if (retCode == ERROR_SUCCESS)
+			{
+				//Log::Info(TEXT("(%d) %s\n"), i + 1, achKey);
+				SubKeys.push_back(achKey);
+			}
+		}
+	}
+
+	// Enumerate the keyPath values.
+	if (cValues)
+	{
+		for (i = 0, retCode = ERROR_SUCCESS; i < cValues; i++)
+		{
+			cchValue = MAX_VALUE_NAME;
+			achValue[0] = '\0';
+			retCode = RegEnumValue(hkey, i,
+				achValue,
+				&cchValue,
+				NULL,
+				NULL,
+				NULL,
+				NULL);
+
+			if (retCode == ERROR_SUCCESS)
+			{
+#if VERBOSE_LOGGING
+				Log::Info(TEXT("(%d) %s\n"), i + 1, achValue);
+#endif
+			}
+		}
+	}
+	return SubKeys;
+}
+static bool DoesDisplayDriverHashMatch(const std::string& keyPath, const std::string& DriverHashToMatch)
+{
+#define MAX_KEY_LENGTH 255
+#define MAX_VALUE_NAME 16383
+	HKEY hkey;
+	LSTATUS status = ERROR_SUCCESS;
+	status = RegOpenKeyEx(HKEY_LOCAL_MACHINE, TEXT(keyPath.c_str()), 0, KEY_READ, &hkey);
+	if (status != ERROR_SUCCESS)
+	{
+#if VERBOSE_LOGGING
+		Log::Error("Coudn't find keyPath: %s", keyPath.c_str());
+#endif
+		return false;
+	}
+
+	TCHAR    achKey[MAX_KEY_LENGTH];   // buffer for subkey name
+	DWORD    cbName;                   // size of name string 
+	TCHAR    achClass[MAX_PATH] = TEXT("");  // buffer for class name 
+	DWORD    cchClassName = MAX_PATH;  // size of class string 
+	DWORD    cSubKeys = 0;               // number of subkeys 
+	DWORD    cbMaxSubKey;              // longest subkey size 
+	DWORD    cchMaxClass;              // longest class string 
+	DWORD    cValues;              // number of values for keyPath 
+	DWORD    cchMaxValue;          // longest value name 
+	DWORD    cbMaxValueData;       // longest value data 
+	DWORD    cbSecurityDescriptor; // size of security descriptor 
+	FILETIME ftLastWriteTime;      // last write time 
+
+	BYTE    cbEnumValue[MAX_VALUE_NAME] = TEXT("");
+
+	DWORD i, retCode;
+
+	TCHAR  achValue[MAX_VALUE_NAME];
+	DWORD cchValue = MAX_VALUE_NAME;
+
+	// Get the class name and the value count. 
+	retCode = RegQueryInfoKey(
+		hkey,                    // keyPath handle 
+		achClass,                // buffer for class name 
+		&cchClassName,           // size of class string 
+		NULL,                    // reserved 
+		&cSubKeys,               // number of subkeys 
+		&cbMaxSubKey,            // longest subkey size 
+		&cchMaxClass,            // longest class string 
+		&cValues,                // number of values for this keyPath 
+		&cchMaxValue,            // longest value name 
+		&cbMaxValueData,         // longest value data 
+		&cbSecurityDescriptor,   // security descriptor 
+		&ftLastWriteTime);       // last write time 
+	
+	// Enumerate the keyPath values.
+	if (cValues)
+	{
+		//printf("\nNumber of values: %d\n", cValues);
+		for (i = 0, retCode = ERROR_SUCCESS; i < cValues; i++)
+		{
+			cchValue = MAX_VALUE_NAME;
+			achValue[0] = '\0';
+			DWORD type = REG_SZ;
+			DWORD size;
+			memset(cbEnumValue, '\0', MAX_VALUE_NAME);
+
+			// MSDN:  https://docs.microsoft.com/en-us/windows/win32/api/winreg/nf-winreg-regenumvaluea
+			// If the data has the REG_SZ, REG_MULTI_SZ or REG_EXPAND_SZ type, the string may not have been stored with 
+			// the proper null-terminating characters. Therefore, even if the function returns ERROR_SUCCESS, the application 
+			// should ensure that the string is properly terminated before using it; otherwise, it may overwrite a buffer.
+			retCode = RegEnumValue(hkey, i,
+				achValue,
+				&cchValue,
+				NULL,
+				&type,
+				NULL,
+				&size);
+
+			if (type != REG_SZ)
+			{
+				continue;
+			}
+
+			if (retCode == ERROR_SUCCESS)
+			{
+				//Log::Info(TEXT("(%d) %s<%d> | strlen=%d\n"), i + 1, achValue, type, size);
+
+				// we care for the Driver field
+				if (stricmp(achValue, "Driver") == 0)
+				{
+					retCode = RegEnumValue(hkey, i,
+						achValue,
+						&cchValue,
+						NULL,
+						&type,
+						cbEnumValue,
+						&size);
+					if (stricmp((const char*)cbEnumValue, DriverHashToMatch.c_str()) == 0)
+					{
+						return true;
+					}
+
+				}
+
+			}
+#if 0 // DEBUGGING
+			else
+			{
+				Log::Error(TEXT("(%d) %s<%d> | strlen=%d\n"), i + 1, achValue, type, size);
+				retCode = RegQueryInfoKey(
+					hkey,                    // keyPath handle 
+					achClass,                // buffer for class name 
+					&cchClassName,           // size of class string 
+					NULL,                    // reserved 
+					&cSubKeys,               // number of subkeys 
+					&cbMaxSubKey,            // longest subkey size 
+					&cchMaxClass,            // longest class string 
+					&cValues,                // number of values for this keyPath 
+					&cchMaxValue,            // longest value name 
+					&cbMaxValueData,         // longest value data 
+					&cbSecurityDescriptor,   // security descriptor 
+					&ftLastWriteTime);       // last write time 
+				int a = 5;
+			}
+#endif // DEBUGGING
+		}
+	}
+
+	return false;
+}
+static void FindAndDecodeEDID(const std::string& MonitorCodeRegistryPath, const std::string& DriverHashToMatch, std::string& outDisplayName)
+{
+	HKEY hkey;
+	LSTATUS status = ERROR_SUCCESS;
+	status = RegOpenKeyEx(HKEY_LOCAL_MACHINE, TEXT(MonitorCodeRegistryPath.c_str()), 0, KEY_READ, &hkey);
+
+	if (status == ERROR_SUCCESS)
+	{
+		std::vector<std::string> SubKeys_MonitorCode = GetSubKeys(hkey);
+		for (const std::string& SubKey_MonitorCode : SubKeys_MonitorCode)
+		{
+			//Log::Info("->%s", SubKey_MonitorCode.c_str());
+
+			// Now we have the 1st level subkeys to the monitor code, which lists driver-hashed UIDs,
+			// we can start looking for the DriverHashToMatch below 1 more level of subkeys.
+
+			const std::string DriverHashPath = MonitorCodeRegistryPath + SubKey_MonitorCode + "\\";
+			const bool bDriverHashMatches = DoesDisplayDriverHashMatch(DriverHashPath, DriverHashToMatch);
+			if (bDriverHashMatches)
+			{
+				const std::string MonitorCodeSubKeyPath = MonitorCodeRegistryPath + SubKey_MonitorCode + "\\Device Parameters\\";
+				HKEY hSubKey;
+				status = RegOpenKeyEx(HKEY_LOCAL_MACHINE, TEXT(MonitorCodeSubKeyPath.c_str()), 0, KEY_READ, &hSubKey);
+				if (status == ERROR_SUCCESS)
+				{
+					// now the hSubKey contains the EDID data
+					TCHAR    achKey[MAX_KEY_LENGTH];   // buffer for subkey name
+					DWORD    cbName;                   // size of name string 
+					TCHAR    achClass[MAX_PATH] = TEXT("");  // buffer for class name 
+					DWORD    cchClassName = MAX_PATH;  // size of class string 
+					DWORD    cSubKeys = 0;               // number of subkeys 
+					DWORD    cbMaxSubKey;              // longest subkey size 
+					DWORD    cchMaxClass;              // longest class string 
+					DWORD    cValues;              // number of values for keyPath 
+					DWORD    cchMaxValue;          // longest value name 
+					DWORD    cbMaxValueData;       // longest value data 
+					DWORD    cbSecurityDescriptor; // size of security descriptor 
+					FILETIME ftLastWriteTime;      // last write time 
+
+					DWORD i, retCode;
+
+					TCHAR  achValue[MAX_VALUE_NAME];
+					DWORD cchValue = MAX_VALUE_NAME;
+
+					// Get the class name and the value count. 
+					retCode = RegQueryInfoKey(
+						hSubKey,                    // keyPath handle 
+						achClass,                // buffer for class name 
+						&cchClassName,           // size of class string 
+						NULL,                    // reserved 
+						&cSubKeys,               // number of subkeys 
+						&cbMaxSubKey,            // longest subkey size 
+						&cchMaxClass,            // longest class string 
+						&cValues,                // number of values for this keyPath 
+						&cchMaxValue,            // longest value name 
+						&cbMaxValueData,         // longest value data 
+						&cbSecurityDescriptor,   // security descriptor 
+						&ftLastWriteTime);       // last write time 
+
+					// Enumerate the EDID value.
+					if (cValues)
+					{
+						for (i = 0, retCode = ERROR_SUCCESS; i < cValues; ++i)
+						{
+							cchValue = MAX_VALUE_NAME;
+							achValue[0] = '\0';
+							
+							DWORD size;
+
+							void* pData = malloc((cbMaxValueData+1) * sizeof(WCHAR));
+							retCode = RegEnumValue(hSubKey, i,
+								achValue,
+								&cchValue,
+								NULL,
+								NULL,
+								(LPBYTE)pData,
+								&size);
+							// pData contains EDID;
+
+							if (retCode == ERROR_SUCCESS)
+							{
+								//Log::Info(TEXT("(%d) %s\n"), i + 1, achValue);
+
+								// https://en.wikipedia.org/wiki/Extended_Display_Identification_Data
+								const unsigned char* EDID = (const unsigned char*)pData;
+								// Bytes[54-125] : 18-byte descriptors: Detailed timing (in decreasing preference order), display descriptors, etc.
+								//   Bytes[54-71]   : Desc1
+								//   Bytes[72-89]   : Desc2
+								//   Bytes[90-107]  : Desc3
+								//   Bytes[108-125] : Desc4
+								// We need to locate the display descriptor that has the monitor name in ascii text
+								const unsigned char* Descs[4] = { &EDID[54], &EDID[72], &EDID[90], &EDID[108] };
+								for (int i = 0; i < 4; ++i)
+								{
+									const unsigned char* Desc = Descs[i];
+									
+									// https://en.wikipedia.org/wiki/Extended_Display_Identification_Data#Display_Descriptors
+									// Display Descriptor Byte Layout
+									// [0-1] : 0
+									// [2]   : Reserved
+									// [3]   : Desc Type with values FA-FF
+									//         FF : Display Serial Number (ASCII Text)
+									//         FE : Unspecified Text (ASCII Text)
+									//         FC : Display name (ASCII Text) <---------- WANT THIS
+									// [4]   : Reserved, except for Display Range Limits descriptor
+									// [5-17]: Data (ASCII Text)
+									// 
+									const bool bIsDisplayDesc = 
+										   (Desc[0] == Desc[1] && Desc[1] == 0)  // ensure [0-1]
+										&& (Desc[3] >= 0xFA && Desc[3] <= 0xFF); // ensure [3]
+									const bool bDescContainsDisplayName = bIsDisplayDesc && Desc[3] == 0xFC;
+
+									if (bDescContainsDisplayName)
+									{
+										const unsigned char* DisplayName = &Desc[5];
+										outDisplayName = std::string((const char*)DisplayName);
+									}
+								}
+							}
+
+							if (pData) free(pData);
+						}
+					}
+
+				}
+				else
+				{
+#if VERBOSE_LOGGING
+					Log::Error("Couldn't open subkey for monitor code: %s", MonitorCodeSubKeyPath.c_str());
+#endif
+				}
+			}
+		}
+		
+	}
+	else
+	{
+#if VERBOSE_LOGGING
+		Log::Error("Couldn't open registry key: %s", MonitorCodeRegistryPath.c_str());
+#endif
+	}
+	RegCloseKey(hkey);
+}
+
 std::vector<FMonitorInfo> GetDisplayInfo()
 {
 	std::vector<FMonitorInfo> monitors;
@@ -174,7 +631,37 @@ std::vector<FMonitorInfo> GetDisplayInfo()
 			i.SupportedModes.push_back(fmode);
 			++iModeNum;
 		}
-		i.DeviceName = device.DeviceName;
+
+		if constexpr (READ_REGISTRY_FOR_DISPLAY_DEVICE_NAME)
+		{
+			constexpr char* DISPLAY_NAME_ENUMS_REGISTRY_PATH_FROM_HKEY_LOCAL_MACHINE = "SYSTEM\\CurrentControlSet\\Enum\\DISPLAY";
+			// Here in the registry root, we'll see part of device.DisplayID as folders, e.g.
+			// DisplayID is generated per driver version, and look like: MONITOR\\ACR0414\\<driver hash>
+			// Hence, we'll see monitor identifiers as folders like:
+			// - ACR0414 - Acer ...
+			// - DELA0DC - Dell ...
+			// - DELA0EA - Dell ...
+			std::vector<std::string> tokens = StrUtil::split(device.DeviceID, '\\');
+			assert(tokens.size() >= 4);
+			const std::string& MONITOR = tokens[0];           // "MONIOTOR"
+			const std::string& MonitorCode = tokens[1];       // "ACR0414"
+			const std::string& DriverHash = tokens[2];        // <driver hash:base>
+			const std::string& DriverVersionHash = tokens[3]; // <driver hash:version>
+			const std::string DisplayDriverHashCombinationToMatch = DriverHash + "\\" + DriverVersionHash; // essentially recreate the <driver hash>
+
+			const std::string RegistryPath_MonitorCode = DISPLAY_NAME_ENUMS_REGISTRY_PATH_FROM_HKEY_LOCAL_MACHINE + std::string("\\") + MonitorCode + std::string("\\");
+			FindAndDecodeEDID(RegistryPath_MonitorCode, DisplayDriverHashCombinationToMatch, i.DeviceName);
+
+			// Finally, EDID string might contain newlines and spaces after the string ends so process it here
+			i.DeviceName = StrUtil::trim(i.DeviceName);
+		}
+		else
+		{
+			i.DeviceName = device.DeviceName;
+		}
+
+		i.DeviceID = device.DeviceID;
+
 		i.HighestMode = fnFindBestMode(i.SupportedModes);
 
 		monitors.push_back(i);

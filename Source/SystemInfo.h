@@ -77,7 +77,7 @@ namespace VQSystemInfo
 	//
 	// MONITOR
 	//
-	struct FColorSpace
+	struct FColorSpace // TODO: rename to DisplayChromaticity?
 	{
 		FColorSpace() = default;
 		FColorSpace(const DXGI_OUTPUT_DESC1& d)
@@ -112,6 +112,7 @@ namespace VQSystemInfo
 
 		//std::string              ManufacturerName; // TODO: use WMI or remove field
 		std::string              DeviceName;
+		std::string              DeviceID;
 		FResolution              NativeResolution;
 		bool                     bSupportsHDR;
 		unsigned                 RotationDegrees;
