@@ -616,7 +616,7 @@ std::vector<FMonitorInfo> GetDisplayInfo()
 
 			i.NativeResolution = { desc.DesktopCoordinates.right - desc.DesktopCoordinates.left, desc.DesktopCoordinates.bottom - desc.DesktopCoordinates.top };
 			i.bSupportsHDR = desc.ColorSpace == DXGI_COLOR_SPACE_RGB_FULL_G2084_NONE_P2020;
-			i.ColorSpace = FColorSpace(desc);
+			i.DisplayChromaticities = FDisplayChromaticities(desc);
 			i.BrightnessValues = FDisplayBrightnessValues(desc);
 
 			++iMonitor;

@@ -77,25 +77,36 @@ namespace VQSystemInfo
 	//
 	// MONITOR
 	//
-	struct FColorSpace // TODO: rename to DisplayChromaticity?
+	struct FDisplayChromaticities // https://en.wikipedia.org/wiki/Chromaticity
 	{
-		FColorSpace() = default;
-		FColorSpace(const DXGI_OUTPUT_DESC1& d)
-			: RedPrimaryXY  { d.RedPrimary[0]  , d.RedPrimary[1]   }
-			, BluePrimaryXY { d.BluePrimary[0] , d.BluePrimary[1]  }
-			, GreenPrimaryXY{ d.GreenPrimary[0], d.GreenPrimary[1] }
-			, WhitePointXY  { d.WhitePoint[0]  , d.WhitePoint[1]   }
+		FDisplayChromaticities(float rx, float ry, float gx, float gy, float bx, float by, float wx, float wy)
+			: RedPrimary_xy  { rx, ry }
+			, GreenPrimary_xy{ gx, gy }
+			, BluePrimary_xy { bx, by }
+			, WhitePoint_xy  { wx, wy }
+		{}
+		FDisplayChromaticities() = default;
+		FDisplayChromaticities(const DXGI_OUTPUT_DESC1& d)
+			: RedPrimary_xy  { d.RedPrimary[0]  , d.RedPrimary[1]   }
+			, GreenPrimary_xy{ d.GreenPrimary[0], d.GreenPrimary[1] }
+			, BluePrimary_xy { d.BluePrimary[0] , d.BluePrimary[1]  }
+			, WhitePoint_xy  { d.WhitePoint[0]  , d.WhitePoint[1]   }
 		{}
 
 		// XY space coordinates of RGB primaries
-		std::array<float, 2> RedPrimaryXY;
-		std::array<float, 2> GreenPrimaryXY;
-		std::array<float, 2> BluePrimaryXY;
-		std::array<float, 2> WhitePointXY;
+		std::array<float, 2> RedPrimary_xy;
+		std::array<float, 2> GreenPrimary_xy;
+		std::array<float, 2> BluePrimary_xy;
+		std::array<float, 2> WhitePoint_xy;
 	};
 	struct FDisplayBrightnessValues
 	{
 		FDisplayBrightnessValues() = default;
+		FDisplayBrightnessValues(float MinLum, float MaxLum, float MaxFullFrameLum) 
+			: MinLuminance(MinLum)
+			, MaxLuminance(MaxLum)
+			, MaxFullFrameLuminance(MaxFullFrameLum)
+		{}
 		FDisplayBrightnessValues(const DXGI_OUTPUT_DESC1& d) 
 			: MinLuminance(d.MinLuminance)
 			, MaxLuminance(d.MaxLuminance)
@@ -118,7 +129,7 @@ namespace VQSystemInfo
 		unsigned                 RotationDegrees;
 		std::vector<FMode>       SupportedModes;
 		FMode                    HighestMode;
-		FColorSpace              ColorSpace;
+		FDisplayChromaticities   DisplayChromaticities;
 		FDisplayBrightnessValues BrightnessValues;
 	};
 
