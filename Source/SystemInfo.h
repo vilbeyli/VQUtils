@@ -18,11 +18,13 @@
 
 #pragma once
 
-#include <d3d12.h>
 #include <string>
 #include <vector>
-#include <dxgi1_6.h>
 #include <array>
+
+#include <windows.h>
+#include <d3d12.h>
+#include <dxgi1_6.h>
 
 // fwd decls
 struct IDXGIOutput;
@@ -131,6 +133,8 @@ namespace VQSystemInfo
 		FMode                    HighestMode;
 		FDisplayChromaticities   DisplayChromaticities;
 		FDisplayBrightnessValues BrightnessValues;
+
+		static bool CheckHDRSupport(HWND hwnd);
 	};
 
 	struct FRAMInfo
