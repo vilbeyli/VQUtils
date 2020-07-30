@@ -264,7 +264,7 @@ static bool DoesDisplayDriverHashMatch(const std::string& keyPath, const std::st
 				//Log::Info(TEXT("(%d) %s<%d> | strlen=%d\n"), i + 1, achValue, type, size);
 
 				// we care for the Driver field
-				if (stricmp(achValue, "Driver") == 0)
+				if (_stricmp(achValue, "Driver") == 0)
 				{
 					retCode = RegEnumValue(hkey, i,
 						achValue,
@@ -273,7 +273,7 @@ static bool DoesDisplayDriverHashMatch(const std::string& keyPath, const std::st
 						&type,
 						cbEnumValue,
 						&size);
-					if (stricmp((const char*)cbEnumValue, DriverHashToMatch.c_str()) == 0)
+					if (_stricmp((const char*)cbEnumValue, DriverHashToMatch.c_str()) == 0)
 					{
 						return true;
 					}
