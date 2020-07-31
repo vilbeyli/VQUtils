@@ -195,8 +195,6 @@ static bool DoesDisplayDriverHashMatch(const std::string& keyPath, const std::st
 		return false;
 	}
 
-	TCHAR    achKey[MAX_KEY_LENGTH];   // buffer for subkey name
-	DWORD    cbName;                   // size of name string 
 	TCHAR    achClass[MAX_PATH] = TEXT("");  // buffer for class name 
 	DWORD    cchClassName = MAX_PATH;  // size of class string 
 	DWORD    cSubKeys = 0;               // number of subkeys 
@@ -332,8 +330,6 @@ static void FindAndDecodeEDID(const std::string& MonitorCodeRegistryPath, const 
 				if (status == ERROR_SUCCESS)
 				{
 					// now the hSubKey contains the EDID data
-					TCHAR    achKey[MAX_KEY_LENGTH];   // buffer for subkey name
-					DWORD    cbName;                   // size of name string 
 					TCHAR    achClass[MAX_PATH] = TEXT("");  // buffer for class name 
 					DWORD    cchClassName = MAX_PATH;  // size of class string 
 					DWORD    cSubKeys = 0;               // number of subkeys 
