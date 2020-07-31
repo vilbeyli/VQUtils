@@ -113,9 +113,22 @@ namespace VQSystemInfo
 			: MinLuminance(d.MinLuminance)
 			, MaxLuminance(d.MaxLuminance)
 			, MaxFullFrameLuminance(d.MaxFullFrameLuminance)
-		{}
+		{} // https://docs.microsoft.com/en-us/windows/win32/api/dxgi1_6/ns-dxgi1_6-dxgi_output_desc1
+
+		// The minimum luminance, in nits, that the display attached to this output 
+		// is capable of rendering;
 		float MinLuminance;
+
+		// The maximum luminance, in nits, that the display attached to this output 
+		// is capable of rendering; this value is likely only valid for a small area 
+		// of the panel. Content should not exceed this minimum value for optimal 
+		// rendering.
 		float MaxLuminance;
+
+		// The maximum luminance, in nits, that the display attached to this output 
+		// is capable of rendering; unlike MaxLuminance, this value is valid for a 
+		// color that fills the entire area of the panel.Content should not exceed 
+		// this value across the entire panel for optimal rendering.
 		float MaxFullFrameLuminance;
 	};
 	struct FMonitorInfo
@@ -125,6 +138,7 @@ namespace VQSystemInfo
 
 		//std::string              ManufacturerName; // TODO: use WMI or remove field
 		std::string              DeviceName;
+		std::string              LogicalDeviceName;
 		std::string              DeviceID;
 		FResolution              NativeResolution;
 		bool                     bSupportsHDR;

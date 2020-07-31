@@ -595,10 +595,7 @@ std::vector<FMonitorInfo> GetDisplayInfo()
 			pOut->GetDesc1(&desc);
 
 			FMonitorInfo& i = monitors[iMonitor];
-			if constexpr (!DISPLAY_DEVICE_NAME__READ_REGISTRY)
-			{
-				i.DeviceName = StrUtil::UnicodeToASCII(desc.DeviceName);
-			}
+			i.LogicalDeviceName = StrUtil::UnicodeToASCII(desc.DeviceName);
 			switch (desc.Rotation)
 			{
 			case DXGI_MODE_ROTATION_IDENTITY   : i.RotationDegrees = 0; break;
