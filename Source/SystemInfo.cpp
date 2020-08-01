@@ -27,6 +27,9 @@
 
 #include <functional>
 #include <cassert>
+#include <algorithm>
+#include <sstream>
+#include <iomanip>
 
 #define VERBOSE_LOGGING 0
 #if VERBOSE_LOGGING
@@ -53,23 +56,11 @@ static DWORD CountSetBits(ULONG_PTR bitMask)
 
 namespace VQSystemInfo
 {
-
-FSystemInfo GetSystemInfo()
-{
-	FSystemInfo i = {};
-
-	i.CPU      = GetCPUInfo();
-	i.GPUs     = GetGPUInfo();
-	i.RAM      = GetRAMInfo();
-	i.Monitors = GetDisplayInfo();
-
-	return i;
-}
-
-
+// ----------------------------------------------------------------------------------------------------------------------------------------------
 //
 // RAM
 //
+// ----------------------------------------------------------------------------------------------------------------------------------------------
 FRAMInfo GetRAMInfo()
 {
 	// https://docs.microsoft.com/en-us/windows/win32/api/sysinfoapi/nf-sysinfoapi-globalmemorystatusex?redirectedfrom=MSDN
@@ -90,9 +81,11 @@ FRAMInfo GetRAMInfo()
 }
 
 
+// ----------------------------------------------------------------------------------------------------------------------------------------------
 //
 // Monitor
 //
+// ----------------------------------------------------------------------------------------------------------------------------------------------
 // https://docs.microsoft.com/en-us/windows/win32/sysinfo/enumerating-registry-subkeys
 static std::vector<std::string> GetSubKeys(HKEY hkey)
 {
@@ -446,6 +439,16 @@ static void FindAndDecodeEDID(const std::string& MonitorCodeRegistryPath, const 
 	RegCloseKey(hkey);
 }
 
+// To detect HDR support, we will need to check the color space in the primary DXGI output associated with the app at
+// this point in time (using window/display intersection). 
+static inline int ComputeIntersectionArea(int ax1, int ay1, int ax2, int ay2, int bx1, int by1, int bx2, int by2)
+{
+	// Compute the overlay area of two rectangles, A and B.
+	// (ax1, ay1) = left-top coordinates of A; (ax2, ay2) = right-bottom coordinates of A
+	// (bx1, by1) = left-top coordinates of B; (bx2, by2) = right-bottom coordinates of B
+	return std::max(0, std::min(ax2, bx2) - std::max(ax1, bx1)) * std::max(0, std::min(ay2, by2) - std::max(ay1, by1));
+}
+
 std::vector<FMonitorInfo> GetDisplayInfo()
 {
 	std::vector<FMonitorInfo> monitors;
@@ -625,10 +628,92 @@ std::vector<FMonitorInfo> GetDisplayInfo()
 	return monitors;
 }
 
+bool FMonitorInfo::CheckHDRSupport(HWND hwnd)
+{
+	auto fnThrowIfFailed = [](HRESULT hr)
+	{
+		if (FAILED(hr))
+		{
+			assert(false);// throw HrException(hr);
+		}
+	};
 
+	RECT windowRect = {};
+	GetWindowRect(hwnd, &windowRect);
+
+	using namespace Microsoft::WRL;
+	ComPtr<IDXGIFactory6> m_dxgiFactory;
+	fnThrowIfFailed(CreateDXGIFactory2(0, IID_PPV_ARGS(&m_dxgiFactory)));
+
+	// First, the method must determine the app's current display. 
+	// We don't recommend using IDXGISwapChain::GetContainingOutput method to do that because of two reasons:
+	//    1. Swap chains created with CreateSwapChainForComposition do not support this method.
+	//    2. Swap chains will return a stale dxgi output once DXGIFactory::IsCurrent() is false. In addition, 
+	//       we don't recommend re-creating swapchain to resolve the stale dxgi output because it will cause a short 
+	//       period of black screen.
+	// Instead, we suggest enumerating through the bounds of all dxgi outputs and determine which one has the greatest 
+	// intersection with the app window bounds. Then, use the DXGI output found in previous step to determine if the 
+	// app is on a HDR capable display. 
+
+	// Retrieve the current default adapter.
+	ComPtr<IDXGIAdapter1> dxgiAdapter;
+	fnThrowIfFailed(m_dxgiFactory->EnumAdapters1(0, &dxgiAdapter));
+
+	// Iterate through the DXGI outputs associated with the DXGI adapter,
+	// and find the output whose bounds have the greatest overlap with the
+	// app window (i.e. the output for which the intersection area is the
+	// greatest).
+
+	UINT i = 0;
+	ComPtr<IDXGIOutput> currentOutput;
+	ComPtr<IDXGIOutput> bestOutput;
+	float bestIntersectArea = -1;
+
+	while (dxgiAdapter->EnumOutputs(i, &currentOutput) != DXGI_ERROR_NOT_FOUND)
+	{
+		// Get the retangle bounds of the app window
+		int ax1 = windowRect.left;
+		int ay1 = windowRect.top;
+		int ax2 = windowRect.right;
+		int ay2 = windowRect.bottom;
+
+		// Get the rectangle bounds of current output
+		DXGI_OUTPUT_DESC desc;
+		fnThrowIfFailed(currentOutput->GetDesc(&desc));
+		RECT r = desc.DesktopCoordinates;
+		int bx1 = r.left;
+		int by1 = r.top;
+		int bx2 = r.right;
+		int by2 = r.bottom;
+
+		// Compute the intersection
+		int intersectArea = ComputeIntersectionArea(ax1, ay1, ax2, ay2, bx1, by1, bx2, by2);
+		if (intersectArea > bestIntersectArea)
+		{
+			bestOutput = currentOutput;
+			bestIntersectArea = static_cast<float>(intersectArea);
+		}
+
+		i++;
+	}
+
+	// Having determined the output (display) upon which the app is primarily being 
+	// rendered, retrieve the HDR capabilities of that display by checking the color space.
+	ComPtr<IDXGIOutput6> output6;
+	fnThrowIfFailed(bestOutput.As(&output6));
+
+	DXGI_OUTPUT_DESC1 desc1;
+	fnThrowIfFailed(output6->GetDesc1(&desc1));
+
+	return (desc1.ColorSpace == DXGI_COLOR_SPACE_RGB_FULL_G2084_NONE_P2020);
+}
+
+
+// ----------------------------------------------------------------------------------------------------------------------------------------------
 //
 // GPU
 //
+// ----------------------------------------------------------------------------------------------------------------------------------------------
 std::vector<FGPUInfo> GetGPUInfo(/*TODO: feature level*/)
 {
 	const bool bEnumerateSoftwareAdapters = false;
@@ -654,6 +739,7 @@ std::vector<FGPUInfo> GetGPUInfo(/*TODO: feature level*/)
 		FGPUInfo GPUInfo = {};
 		GPUInfo.DedicatedGPUMemory = desc.DedicatedVideoMemory;
 		GPUInfo.DeviceID = desc.DeviceId;
+		// TODO: GPU Device Name;
 		//GPUInfo.DeviceName = UnicodeToASCII<_countof(desc.Description)>(desc.Description);
 		GPUInfo.VendorID = desc.VendorId;
 		///GPUInfo.MaxSupportedFeatureLevel = FEATURE_LEVEL;
@@ -707,10 +793,16 @@ std::vector<FGPUInfo> GetGPUInfo(/*TODO: feature level*/)
 	return GPUs;
 }
 
+// https://gamedev.stackexchange.com/questions/31625/get-video-chipset-manufacturer-in-direct3d
+bool FGPUInfo::IsAMD()    const { return VendorID == 0x1002; }
+bool FGPUInfo::IsNVidia() const { return VendorID == 0x10DE; }
+bool FGPUInfo::IsIntel()  const { return VendorID == 0x163C || VendorID == 0x8086 || VendorID == 0x8087; }
 
+// ----------------------------------------------------------------------------------------------------------------------------------------------
 //
 // CPU
 //
+// ----------------------------------------------------------------------------------------------------------------------------------------------
 FCPUInfo GetCPUInfo()
 {
 	FCPUInfo i;
@@ -876,94 +968,212 @@ FCPUInfo GetCPUInfo()
 	return i;
 }
 
-#include <algorithm>
-// To detect HDR support, we will need to check the color space in the primary DXGI output associated with the app at
-// this point in time (using window/display intersection). 
-static inline int ComputeIntersectionArea(int ax1, int ay1, int ax2, int ay2, int bx1, int by1, int bx2, int by2)
+bool FCPUInfo::IsAMD() const
 {
-	// Compute the overlay area of two rectangles, A and B.
-	// (ax1, ay1) = left-top coordinates of A; (ax2, ay2) = right-bottom coordinates of A
-	// (bx1, by1) = left-top coordinates of B; (bx2, by2) = right-bottom coordinates of B
-	return std::max(0, std::min(ax2, bx2) - std::max(ax1, bx1)) * std::max(0, std::min(ay2, by2) - std::max(ay1, by1));
+	return DeviceName == "AuthenticAMD";
 }
-bool FMonitorInfo::CheckHDRSupport(HWND hwnd)
+bool FCPUInfo::IsIntel() const
 {
-	auto fnThrowIfFailed = [](HRESULT hr)
+	return DeviceName == "GenuineIntel";
+}
+
+static std::vector<FCacheInfo> GetCacheInfoOfTypeAtLevel(const std::vector<FCacheInfo>& cacheInfo, short level, FCacheInfo::ECacheType type)
+{
+	std::vector<FCacheInfo> filteredInfo;
+	for (const FCacheInfo& i : cacheInfo)
 	{
-		if (FAILED(hr))
-		{
-			assert(false);// throw HrException(hr);
-		}
-	};
-
-	RECT windowRect = {};
-	GetWindowRect(hwnd, &windowRect);
-
-	using namespace Microsoft::WRL;
-	ComPtr<IDXGIFactory6> m_dxgiFactory;
-	fnThrowIfFailed(CreateDXGIFactory2(0, IID_PPV_ARGS(&m_dxgiFactory)));
-
-	// First, the method must determine the app's current display. 
-	// We don't recommend using IDXGISwapChain::GetContainingOutput method to do that because of two reasons:
-	//    1. Swap chains created with CreateSwapChainForComposition do not support this method.
-	//    2. Swap chains will return a stale dxgi output once DXGIFactory::IsCurrent() is false. In addition, 
-	//       we don't recommend re-creating swapchain to resolve the stale dxgi output because it will cause a short 
-	//       period of black screen.
-	// Instead, we suggest enumerating through the bounds of all dxgi outputs and determine which one has the greatest 
-	// intersection with the app window bounds. Then, use the DXGI output found in previous step to determine if the 
-	// app is on a HDR capable display. 
-
-	// Retrieve the current default adapter.
-	ComPtr<IDXGIAdapter1> dxgiAdapter;
-	fnThrowIfFailed(m_dxgiFactory->EnumAdapters1(0, &dxgiAdapter));
-
-	// Iterate through the DXGI outputs associated with the DXGI adapter,
-	// and find the output whose bounds have the greatest overlap with the
-	// app window (i.e. the output for which the intersection area is the
-	// greatest).
-
-	UINT i = 0;
-	ComPtr<IDXGIOutput> currentOutput;
-	ComPtr<IDXGIOutput> bestOutput;
-	float bestIntersectArea = -1;
-
-	while (dxgiAdapter->EnumOutputs(i, &currentOutput) != DXGI_ERROR_NOT_FOUND)
+		if (i.Level == level && i.Type == type)
+			filteredInfo.push_back(i);
+	}
+	return filteredInfo;
+}
+unsigned long FCPUInfo::GetDCacheSize(short Level, int* pOutNumCaches/* = nullptr*/) const
+{
+	const FCacheInfo::ECacheType CacheType = Level == 1 ? FCacheInfo::ECacheType::DATA : FCacheInfo::ECacheType::UNIFIED;
+	const std::vector<FCacheInfo> info = GetCacheInfoOfTypeAtLevel(this->CacheInfo, Level, CacheType);
+	if(info.empty())
+		return 0;
+	if (pOutNumCaches)
 	{
-		// Get the retangle bounds of the app window
-		int ax1 = windowRect.left;
-		int ay1 = windowRect.top;
-		int ax2 = windowRect.right;
-		int ay2 = windowRect.bottom;
+		*pOutNumCaches = static_cast<int>(info.size());
+	}
+	return info[0].CacheSize;
+}
+unsigned long FCPUInfo::GetDCacheLineSize(short Level) const
+{
+	const FCacheInfo::ECacheType CacheType = Level == 1 ? FCacheInfo::ECacheType::DATA : FCacheInfo::ECacheType::UNIFIED;
+	const std::vector<FCacheInfo> info = GetCacheInfoOfTypeAtLevel(this->CacheInfo, Level, CacheType);
+	if (info.empty())
+		return 0;
+	return info[0].LineSize;
+}
+unsigned long FCPUInfo::GetICacheSize(int* pOutNumCaches /*= nullptr*/) const
+{
+	const std::vector<FCacheInfo> info = GetCacheInfoOfTypeAtLevel(this->CacheInfo, 1, FCacheInfo::ECacheType::INSTRUCTION);
+	if (info.empty())
+		return 0;
+	if (pOutNumCaches)
+	{
+		*pOutNumCaches = static_cast<int>(info.size());
+	}
+	return info[0].CacheSize;
+}
 
-		// Get the rectangle bounds of current output
-		DXGI_OUTPUT_DESC desc;
-		fnThrowIfFailed(currentOutput->GetDesc(&desc));
-		RECT r = desc.DesktopCoordinates;
-		int bx1 = r.left;
-		int by1 = r.top;
-		int bx2 = r.right;
-		int by2 = r.bottom;
 
-		// Compute the intersection
-		int intersectArea = ComputeIntersectionArea(ax1, ay1, ax2, ay2, bx1, by1, bx2, by2);
-		if (intersectArea > bestIntersectArea)
-		{
-			bestOutput = currentOutput;
-			bestIntersectArea = static_cast<float>(intersectArea);
-		}
 
-		i++;
+// ----------------------------------------------------------------------------------------------------------------------------------------------
+//
+// SYSTEM
+//
+// ----------------------------------------------------------------------------------------------------------------------------------------------
+FSystemInfo GetSystemInfo()
+{
+	FSystemInfo i = {};
+
+	i.CPU = GetCPUInfo();
+	i.GPUs = GetGPUInfo();
+	i.RAM = GetRAMInfo();
+	i.Monitors = GetDisplayInfo();
+
+	return i;
+}
+
+template<class... Args>
+static void INFO(std::string& s, const char* format, Args&&... args)
+{
+	char msg[2048]; 
+	sprintf_s(msg, format, args...); 
+	s += msg;
+	s += "\n";
+}
+
+static std::string FORMAT_BYTE(unsigned long long bytes)
+{
+	constexpr unsigned long long KILOBYTE = 1024ull;
+	constexpr unsigned long long MEGABYTE = 1024ull * KILOBYTE;
+	constexpr unsigned long long GIGABYTE = 1024ull * MEGABYTE;
+	constexpr unsigned long long TERABYTE = 1024ull * GIGABYTE;
+
+	std::string unit = "B";
+	double newMagnitudeInUnits = static_cast<double>(bytes);
+
+	if (bytes > KILOBYTE)
+	{
+		unit = "KB";
+		newMagnitudeInUnits /= 1024.0;
+	}
+	if (bytes > MEGABYTE)
+	{
+		unit = "MB";
+		newMagnitudeInUnits /= 1024.0;
+	}
+	if (bytes > GIGABYTE)
+	{
+		unit = "GB";
+		newMagnitudeInUnits /= 1024.0;
+	}
+	if (bytes > TERABYTE)
+	{
+		unit = "TB";
+		newMagnitudeInUnits /= 1024.0;
 	}
 
-	// Having determined the output (display) upon which the app is primarily being 
-	// rendered, retrieve the HDR capabilities of that display by checking the color space.
-	ComPtr<IDXGIOutput6> output6;
-	fnThrowIfFailed(bestOutput.As(&output6));
+	std::ostringstream ss;
+	ss << std::fixed << std::setprecision(0) << newMagnitudeInUnits << unit;
+	return ss.str();
+}
 
-	DXGI_OUTPUT_DESC1 desc1;
-	fnThrowIfFailed(output6->GetDesc1(&desc1));
+std::string PrintSystemInfo(const FSystemInfo& i, const bool bDetailed /*= false*/)
+{
+	int ii = 0; // index counter
+	std::string output;
+	std::string& o = output; // shorthand
+	
+	// test------------------------------------
+	const bool bCPU_AMD	  = i.CPU.IsAMD();	 
+	const bool bCPU_Intel = i.CPU.IsIntel(); 
+	const bool bGPU_AMD   = i.GPUs[0].IsAMD();   
+	const bool bGPU_Intel = i.GPUs[0].IsIntel(); 
+	const bool bGPU_Nvidia= i.GPUs[0].IsNVidia();
+	// test------------------------------------
 
-	return (desc1.ColorSpace == DXGI_COLOR_SPACE_RGB_FULL_G2084_NONE_P2020);
+	int L3NumCaches = 0 ;  int L2NumCaches = 0;
+	int L1NumDCaches = 0; int L1NumICaches = 0;
+	unsigned long long L3CacheSize  = i.CPU.GetDCacheSize(3, &L3NumCaches);
+	unsigned long long L2CacheSize  = i.CPU.GetDCacheSize(2, &L2NumCaches);;
+	unsigned long long L1DCacheSize = i.CPU.GetDCacheSize(1, &L1NumDCaches);;
+	unsigned long long L1ICacheSize = i.CPU.GetICacheSize(&L1NumICaches);;
+
+	INFO(o, "------------------- SYSTEM INFO -------------------");
+	
+	INFO(o, "CPU");
+	INFO(o, "\tManufacturer        : %s", i.CPU.ManufacturerName.c_str());
+	INFO(o, "\tModel               : %s", i.CPU.DeviceName.c_str());
+	INFO(o, "\tCores/Threads       : %d/%d", i.CPU.NumCores, i.CPU.NumThreads);
+	if (bDetailed)
+	{
+	INFO(o, "\tNUMA Nodes          : %d", i.CPU.NumNUMANodes);
+	INFO(o, "\tModelID             : 0x%x", i.CPU.ModelID );
+	INFO(o, "\tFamilyID            : 0x%x", i.CPU.FamilyID);
+	}
+	INFO(o, "\tL3 Cache            : %d x %s, %s Total L3", L3NumCaches , FORMAT_BYTE(L3CacheSize).c_str(), FORMAT_BYTE(L3CacheSize * L3NumCaches).c_str());
+	INFO(o, "\tL2 Cache            : %d x %s, %s Total L2", L2NumCaches , FORMAT_BYTE(L2CacheSize) .c_str(), FORMAT_BYTE(L2CacheSize  * L2NumCaches ).c_str());
+	INFO(o, "\tL1 D-Cache          : %d x %s", L1NumDCaches, FORMAT_BYTE(L1DCacheSize).c_str());
+	INFO(o, "\tL1 I-Cache          : %d x %s", L1NumICaches, FORMAT_BYTE(L1ICacheSize).c_str());
+	INFO(o, "\tCache Lines         : %s", FORMAT_BYTE(i.CPU.GetDCacheLineSize(1)).c_str());
+
+	INFO(o, "");
+
+	INFO(o, "RAM");
+	INFO(o, "\tPhys. Total Memory  : %s", FORMAT_BYTE(i.RAM.TotalPhysicalMemory).c_str());
+	INFO(o, "\tPhys. Free  Memory  : %s", FORMAT_BYTE(i.RAM.FreePhysicalMemory).c_str());
+	INFO(o, "\tUsage %%             : %u%%", i.RAM.UsagePercentage);
+	INFO(o, "\tVirt. Total Memory  : %s", FORMAT_BYTE(i.RAM.TotalVirtualMemory ).c_str());
+	INFO(o, "\tVirt. Free  Memory  : %s", FORMAT_BYTE(i.RAM.FreeVirtualMemory  ).c_str());
+
+
+	ii = 0; 
+	for( const VQSystemInfo::FGPUInfo& GPU : i.GPUs)
+	{
+	INFO(o, "");
+	INFO(o, "GPU %d", ii++);
+	INFO(o, "\tManufacturer        : %s", GPU.ManufacturerName.c_str());
+	INFO(o, "\tDeviceName          : %s", GPU.DeviceName.c_str());
+	INFO(o, "\tMemory              : %s", FORMAT_BYTE(GPU.DedicatedGPUMemory).c_str());
+	INFO(o, "\tDeviceID            : 0x%x", GPU.DeviceID);
+	INFO(o, "\tVendorID            : 0x%x", GPU.VendorID);
+	} // for(GPU)
+
+	ii = 0;
+	for( const VQSystemInfo::FMonitorInfo& m : i.Monitors)
+	{
+	INFO(o, "");
+	INFO(o, "Display %d", ii++);
+	INFO(o, "\tDeviceName         : %s", m.DeviceName.c_str());
+	INFO(o, "\tLogicalDeviceName  : %s", m.LogicalDeviceName.c_str());
+	if(bDetailed)
+	{
+	INFO(o, "\tDeviceID           : %s", m.DeviceID.c_str());
+	if(m.RotationDegrees!=0) INFO(o, "\tRotation           : %d Degrees", m.RotationDegrees);
+	} // bDetailed
+	INFO(o, "\tNative Resolution  : %dx%d", m.NativeResolution.Width, m.NativeResolution.Height);
+	INFO(o, "\tHDR Support        : %s", m.bSupportsHDR ? "Yes" : "No");
+	if(m.bSupportsHDR)
+	{
+	INFO(o, "\tChromaticities");
+	INFO(o, "\t  RedPrimary_xy    : %.2f, %.2f", m.DisplayChromaticities.RedPrimary_xy[0], m.DisplayChromaticities.RedPrimary_xy[1]);
+	INFO(o, "\t  GreenPrimary_xy  : %.2f, %.2f", m.DisplayChromaticities.GreenPrimary_xy[0], m.DisplayChromaticities.GreenPrimary_xy[1]);
+	INFO(o, "\t  BluePrimary_xy   : %.2f, %.2f", m.DisplayChromaticities.BluePrimary_xy[0], m.DisplayChromaticities.BluePrimary_xy[1]);
+	INFO(o, "\t  WhitePoint_xy    : %.2f, %.2f", m.DisplayChromaticities.WhitePoint_xy[0], m.DisplayChromaticities.WhitePoint_xy[1]);
+	} // bSupportsHDR
+	INFO(o, "\tBrightness");
+	INFO(o, "\t  MinLuminance     : %.3f Nits", m.BrightnessValues.MinLuminance);
+	INFO(o, "\t  MaxLuminance     : %d Nits", (int)m.BrightnessValues.MaxLuminance);
+	INFO(o, "\t  MaxFullFrameLum  : %d Nits", (int)m.BrightnessValues.MaxFullFrameLuminance);
+	} // for(Monitor)
+
+	INFO(o, "------------------- SYSTEM INFO -------------------");
+	return output;
 }
 
 } // namespace VQSystemInfo

@@ -54,11 +54,11 @@ namespace VQSystemInfo
 		unsigned    ModelID;
 		unsigned    FamilyID;
 
-		/* TODO */ bool           IsAMD() const;
-		/* TODO */ bool           IsIntel() const;
-		/* TODO */ unsigned short GetDCacheSize(short Level) const;
-		/* TODO */ unsigned short GetDCacheLineSize(short Level) const;
-		/* TODO */ unsigned short GetICacheSize() const;
+		bool          IsAMD() const;
+		bool          IsIntel() const;
+		unsigned long GetDCacheSize(short Level, int* pOutNumCaches = nullptr) const;
+		unsigned long GetDCacheLineSize(short Level) const;
+		unsigned long GetICacheSize(int* pOutNumCaches = nullptr) const;
 	};
 	
 	//
@@ -73,6 +73,10 @@ namespace VQSystemInfo
 		size_t         DedicatedGPUMemory;
 		IDXGIAdapter1* pAdapter;
 		D3D_FEATURE_LEVEL MaxSupportedFeatureLevel; // todo: bool d3d12_0 ?
+
+		bool IsAMD() const;
+		bool IsNVidia() const;
+		bool IsIntel() const;
 	};
 
 
@@ -81,13 +85,13 @@ namespace VQSystemInfo
 	//
 	struct FDisplayChromaticities // https://en.wikipedia.org/wiki/Chromaticity
 	{
+		FDisplayChromaticities() = default;
 		FDisplayChromaticities(float rx, float ry, float gx, float gy, float bx, float by, float wx, float wy)
 			: RedPrimary_xy  { rx, ry }
 			, GreenPrimary_xy{ gx, gy }
 			, BluePrimary_xy { bx, by }
 			, WhitePoint_xy  { wx, wy }
 		{}
-		FDisplayChromaticities() = default;
 		FDisplayChromaticities(const DXGI_OUTPUT_DESC1& d)
 			: RedPrimary_xy  { d.RedPrimary[0]  , d.RedPrimary[1]   }
 			, GreenPrimary_xy{ d.GreenPrimary[0], d.GreenPrimary[1] }
@@ -96,24 +100,16 @@ namespace VQSystemInfo
 		{}
 
 		// XY space coordinates of RGB primaries
-		std::array<float, 2> RedPrimary_xy;
+		std::array<float, 2>   RedPrimary_xy;
 		std::array<float, 2> GreenPrimary_xy;
-		std::array<float, 2> BluePrimary_xy;
-		std::array<float, 2> WhitePoint_xy;
+		std::array<float, 2>  BluePrimary_xy;
+		std::array<float, 2>   WhitePoint_xy;
 	};
 	struct FDisplayBrightnessValues
 	{
 		FDisplayBrightnessValues() = default;
-		FDisplayBrightnessValues(float MinLum, float MaxLum, float MaxFullFrameLum) 
-			: MinLuminance(MinLum)
-			, MaxLuminance(MaxLum)
-			, MaxFullFrameLuminance(MaxFullFrameLum)
-		{}
-		FDisplayBrightnessValues(const DXGI_OUTPUT_DESC1& d) 
-			: MinLuminance(d.MinLuminance)
-			, MaxLuminance(d.MaxLuminance)
-			, MaxFullFrameLuminance(d.MaxFullFrameLuminance)
-		{} // https://docs.microsoft.com/en-us/windows/win32/api/dxgi1_6/ns-dxgi1_6-dxgi_output_desc1
+		FDisplayBrightnessValues(float MinLum, float MaxLum, float MaxFullFrameLum) : MinLuminance(MinLum), MaxLuminance(MaxLum), MaxFullFrameLuminance(MaxFullFrameLum) {}
+		FDisplayBrightnessValues(const DXGI_OUTPUT_DESC1& d) : MinLuminance(d.MinLuminance), MaxLuminance(d.MaxLuminance), MaxFullFrameLuminance(d.MaxFullFrameLuminance){} // https://docs.microsoft.com/en-us/windows/win32/api/dxgi1_6/ns-dxgi1_6-dxgi_output_desc1
 
 		// The minimum luminance, in nits, that the display attached to this output 
 		// is capable of rendering;
@@ -183,5 +179,6 @@ namespace VQSystemInfo
 	FSystemInfo               GetSystemInfo();
 
 	// std::string GetFormattedSize(unsigned long long Bytes); // GetFormattedSize(1048576) -> "1MB"
+	std::string PrintSystemInfo(const FSystemInfo& i, const bool bDetailed = false);
 
 } // namespace VQSystemInfo
