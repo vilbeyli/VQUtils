@@ -21,10 +21,12 @@
 struct Image
 {
     static Image LoadFromFile(const char* pFilePath, bool bHDR);
+
     void Destroy();  // Destroy must be called following a LoadFromFile() to prevent memory leak
 
     union { int x; int Width; };
     union { int y; int Height; };
     int BytesPerPixel = 0;
     void* pData = nullptr;
+    float MaxLuminance;
 };

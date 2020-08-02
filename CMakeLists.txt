@@ -9,6 +9,7 @@ set (Lib_headers
     "Libs/stb/stb_image.h"
     "Libs/stb/stb_image_resize.h"
     "Libs/stb/stb_image_write.h"
+    "Libs/tinyxml2/tinyxml2.h"
 )
 
 set (Headers
@@ -27,6 +28,7 @@ set (Source
     "Source/SystemInfo.cpp"
     "Source/Image.cpp"
     "Source/Timer.cpp"
+    "Libs/tinyxml2/tinyxml2.cpp"
 )
 
 source_group("Libs"   FILES ${Lib_headers})

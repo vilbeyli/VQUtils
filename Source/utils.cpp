@@ -281,6 +281,32 @@ namespace DirectoryUtil
 		return CompareFileTime(&ftWrite[0], &ftWrite[1]) == 1;
 #endif
 	}
+	std::vector<std::string> ListFilesInDirectory(const std::string& Directory, const char* FileExtension)
+	{
+		if (FileExtension)
+		{
+			assert(strlen(FileExtension) > 0);
+			if (FileExtension[0] == '.')
+				FileExtension = &FileExtension[1];
+		}
+		std::vector<std::string> files;
+		for (const auto& entry : std::filesystem::directory_iterator(Directory))
+		{
+			if (entry.is_directory()) continue;
+			if (FileExtension)
+			{
+				if (DirectoryUtil::GetFileExtension(entry.path().string()) == FileExtension)
+				{
+					files.push_back(entry.path().string());
+				}
+			}
+			else
+			{
+				files.push_back("");
+			}
+		}
+		return files;
+	}
 }
 
 //---------------------------------------------------------------------------------------------

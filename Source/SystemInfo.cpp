@@ -471,6 +471,7 @@ std::vector<FMonitorInfo> GetDisplayInfo()
 				bestMode.Resolution = mode.Resolution;
 		}
 
+		// this isn't very good. the 4K@60Hz monitor can return a 75Hz mode that isn't 4K.
 		return bestMode;
 	};
 
@@ -645,6 +646,7 @@ bool FMonitorInfo::CheckHDRSupport(HWND hwnd)
 	ComPtr<IDXGIFactory6> m_dxgiFactory;
 	fnThrowIfFailed(CreateDXGIFactory2(0, IID_PPV_ARGS(&m_dxgiFactory)));
 
+	// From D3D12HDR: 
 	// First, the method must determine the app's current display. 
 	// We don't recommend using IDXGISwapChain::GetContainingOutput method to do that because of two reasons:
 	//    1. Swap chains created with CreateSwapChainForComposition do not support this method.
@@ -792,11 +794,6 @@ std::vector<FGPUInfo> GetGPUInfo(/*TODO: feature level*/)
 
 	return GPUs;
 }
-
-// https://gamedev.stackexchange.com/questions/31625/get-video-chipset-manufacturer-in-direct3d
-bool FGPUInfo::IsAMD()    const { return VendorID == 0x1002; }
-bool FGPUInfo::IsNVidia() const { return VendorID == 0x10DE; }
-bool FGPUInfo::IsIntel()  const { return VendorID == 0x163C || VendorID == 0x8086 || VendorID == 0x8087; }
 
 // ----------------------------------------------------------------------------------------------------------------------------------------------
 //
@@ -1116,8 +1113,8 @@ std::string PrintSystemInfo(const FSystemInfo& i, const bool bDetailed /*= false
 	INFO(o, "\tModelID             : 0x%x", i.CPU.ModelID );
 	INFO(o, "\tFamilyID            : 0x%x", i.CPU.FamilyID);
 	}
-	INFO(o, "\tL3 Cache            : %d x %s, %s Total L3", L3NumCaches , FORMAT_BYTE(L3CacheSize).c_str(), FORMAT_BYTE(L3CacheSize * L3NumCaches).c_str());
-	INFO(o, "\tL2 Cache            : %d x %s, %s Total L2", L2NumCaches , FORMAT_BYTE(L2CacheSize) .c_str(), FORMAT_BYTE(L2CacheSize  * L2NumCaches ).c_str());
+	INFO(o, "\tL3 Cache            : %d x %s, %s Total L3", L3NumCaches, FORMAT_BYTE(L3CacheSize).c_str(), FORMAT_BYTE(L3CacheSize * L3NumCaches).c_str());
+	INFO(o, "\tL2 Cache            : %d x %s, %s Total L2", L2NumCaches, FORMAT_BYTE(L2CacheSize).c_str(), FORMAT_BYTE(L2CacheSize * L2NumCaches).c_str());
 	INFO(o, "\tL1 D-Cache          : %d x %s", L1NumDCaches, FORMAT_BYTE(L1DCacheSize).c_str());
 	INFO(o, "\tL1 I-Cache          : %d x %s", L1NumICaches, FORMAT_BYTE(L1ICacheSize).c_str());
 	INFO(o, "\tCache Lines         : %s", FORMAT_BYTE(i.CPU.GetDCacheLineSize(1)).c_str());

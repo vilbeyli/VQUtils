@@ -102,6 +102,10 @@ namespace DirectoryUtil
 	// returns true if @file0 has been written into later than @file1 has.
 	//
 	bool		IsFileNewer(const std::string& file0, const std::string& file1);
+
+	// returns a list of files, filtered by the extension if specified
+	//
+	std::vector<std::string> ListFilesInDirectory(const std::string& Directory, const char* FileExtension = nullptr);
 }
 
 

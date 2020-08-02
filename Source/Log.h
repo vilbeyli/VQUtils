@@ -22,6 +22,9 @@
 
 namespace Settings { struct Logger; }
 
+
+
+
 #define VARIADIC_LOG_FN(FN_NAME)\
 template<class... Args>\
 void FN_NAME(const char* format, Args&&... args)\
@@ -44,7 +47,7 @@ namespace Log
 
 	//---------------------------------------------------------------------------------------------
 
-	constexpr size_t LEN_MSG_BUFFER = 2048;
+	constexpr size_t LEN_MSG_BUFFER = 4096;
 	struct LogInitializeParams 
 	{
 		bool bLogConsole        = false;

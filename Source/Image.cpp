@@ -22,6 +22,57 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "../Libs/stb/stb_image.h"
 
+#include <vector>
+#include <cmath>
+
+static float CalculateMaxLuminance(const float* pData, int width, int height, int numComponents)
+{
+    float MaxLuminance = 0.0f;
+    float MaxLuminance2 = 0.0f;
+    float MaxLuminance3 = 0.0f;
+    float MaxLightLevel = 0.0f;
+    float LuminanceSum = 0.0f;
+    
+    for(int h=0; h< height; ++h) // row
+    for(int w = 0; w < width; ++w) // col
+    {
+        const int pxIndex = (w  + width * h) * numComponents;
+        const float& r = pData[pxIndex + 0];
+        const float& g = pData[pxIndex + 1];
+        const float& b = pData[pxIndex + 2];
+
+        // https://en.wikipedia.org/wiki/Relative_luminance
+        const float lum = 0.2126f * r + 0.7152f * g + 0.0722f * b;
+        if (lum > MaxLuminance) 
+            MaxLuminance = lum;
+
+        const float lum2 = 0.299f * r + 0.587f * g + 0.114f * b;
+        if (lum2 > MaxLuminance2)
+            MaxLuminance2 = lum2;
+
+        const float lum3 = std::sqrtf(0.299f * r * r + 0.587f * g * g + 0.114f * b * b);
+        if (lum3 > MaxLuminance3)
+            MaxLuminance3 = lum3;
+
+
+
+        if (MaxLightLevel <= r)
+            MaxLightLevel = r;
+        if (MaxLightLevel <= g)
+            MaxLightLevel = g;
+        if (MaxLightLevel <= b)
+            MaxLightLevel = b;
+
+
+        LuminanceSum += lum;;
+    }
+
+    // calc avg lum
+    LuminanceSum /= width * height; // TODO:
+
+    return MaxLuminance;
+}
+
 Image Image::LoadFromFile(const char* pFilePath, bool bHDR)
 {
     Image img;
@@ -35,6 +86,12 @@ Image Image::LoadFromFile(const char* pFilePath, bool bHDR)
         Log::Error("Error loading file: %s", pFilePath);
     }
     img.BytesPerPixel = bHDR ? NumImageComponents * 6 /* RGB16F(6) vs RGBA16F(8) ?*/ : NumImageComponents;
+
+    if (img.pData && bHDR)
+    {
+        img.MaxLuminance = CalculateMaxLuminance(static_cast<const float*>(img.pData), img.Width, img.Height, 4);
+    }
+
     return img;
 }
 
