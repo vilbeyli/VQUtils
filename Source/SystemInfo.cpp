@@ -741,8 +741,7 @@ std::vector<FGPUInfo> GetGPUInfo(/*TODO: feature level*/)
 		FGPUInfo GPUInfo = {};
 		GPUInfo.DedicatedGPUMemory = desc.DedicatedVideoMemory;
 		GPUInfo.DeviceID = desc.DeviceId;
-		// TODO: GPU Device Name;
-		//GPUInfo.DeviceName = UnicodeToASCII<_countof(desc.Description)>(desc.Description);
+		GPUInfo.DeviceName = StrUtil::UnicodeToASCII<1024>(desc.Description);
 		GPUInfo.VendorID = desc.VendorId;
 		///GPUInfo.MaxSupportedFeatureLevel = FEATURE_LEVEL;
 		pAdapter->QueryInterface(IID_PPV_ARGS(&GPUInfo.pAdapter));
@@ -1134,7 +1133,6 @@ std::string PrintSystemInfo(const FSystemInfo& i, const bool bDetailed /*= false
 	{
 	INFO(o, "");
 	INFO(o, "GPU %d", ii++);
-	INFO(o, "\tManufacturer        : %s", GPU.ManufacturerName.c_str());
 	INFO(o, "\tDeviceName          : %s", GPU.DeviceName.c_str());
 	INFO(o, "\tMemory              : %s", FORMAT_BYTE(GPU.DedicatedGPUMemory).c_str());
 	INFO(o, "\tDeviceID            : 0x%x", GPU.DeviceID);

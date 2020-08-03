@@ -66,7 +66,6 @@ namespace VQSystemInfo
 	//
 	struct FGPUInfo
 	{
-		std::string    ManufacturerName;
 		std::string    DeviceName;
 		unsigned       DeviceID;
 		unsigned       VendorID;
