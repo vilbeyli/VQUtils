@@ -65,6 +65,8 @@ namespace StrUtil
 		wcstombs_s(&numCharsConverted, ascii, wchars, STR_SIZE);
 		return std::string(ascii);
 	}
+
+	std::string FormatByte(unsigned long long bytes);
 }
 
 

@@ -1043,41 +1043,7 @@ static void INFO(std::string& s, const char* format, Args&&... args)
 	s += "\n";
 }
 
-static std::string FORMAT_BYTE(unsigned long long bytes)
-{
-	constexpr unsigned long long KILOBYTE = 1024ull;
-	constexpr unsigned long long MEGABYTE = 1024ull * KILOBYTE;
-	constexpr unsigned long long GIGABYTE = 1024ull * MEGABYTE;
-	constexpr unsigned long long TERABYTE = 1024ull * GIGABYTE;
-
-	std::string unit = "B";
-	double newMagnitudeInUnits = static_cast<double>(bytes);
-
-	if (bytes > KILOBYTE)
-	{
-		unit = "KB";
-		newMagnitudeInUnits /= 1024.0;
-	}
-	if (bytes > MEGABYTE)
-	{
-		unit = "MB";
-		newMagnitudeInUnits /= 1024.0;
-	}
-	if (bytes > GIGABYTE)
-	{
-		unit = "GB";
-		newMagnitudeInUnits /= 1024.0;
-	}
-	if (bytes > TERABYTE)
-	{
-		unit = "TB";
-		newMagnitudeInUnits /= 1024.0;
-	}
-
-	std::ostringstream ss;
-	ss << std::fixed << std::setprecision(0) << newMagnitudeInUnits << unit;
-	return ss.str();
-}
+inline static std::string FORMAT_BYTE(unsigned long long bytes) { return StrUtil::FormatByte(bytes); }
 
 std::string PrintSystemInfo(const FSystemInfo& i, const bool bDetailed /*= false*/)
 {

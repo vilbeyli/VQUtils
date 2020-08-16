@@ -151,6 +151,41 @@ namespace StrUtil
 		return std::string(wstr.begin(), wstr.end());  // results in warning in C++17
 #endif
 	}
+	std::string FormatByte(unsigned long long bytes)
+	{
+		constexpr unsigned long long KILOBYTE = 1024ull;
+		constexpr unsigned long long MEGABYTE = 1024ull * KILOBYTE;
+		constexpr unsigned long long GIGABYTE = 1024ull * MEGABYTE;
+		constexpr unsigned long long TERABYTE = 1024ull * GIGABYTE;
+
+		std::string unit = "B";
+		double newMagnitudeInUnits = static_cast<double>(bytes);
+
+		if (bytes > KILOBYTE)
+		{
+			unit = "KB";
+			newMagnitudeInUnits /= 1024.0;
+		}
+		if (bytes > MEGABYTE)
+		{
+			unit = "MB";
+			newMagnitudeInUnits /= 1024.0;
+		}
+		if (bytes > GIGABYTE)
+		{
+			unit = "GB";
+			newMagnitudeInUnits /= 1024.0;
+		}
+		if (bytes > TERABYTE)
+		{
+			unit = "TB";
+			newMagnitudeInUnits /= 1024.0;
+		}
+
+		std::ostringstream ss;
+		ss << std::fixed << std::setprecision(0) << newMagnitudeInUnits << unit;
+		return ss.str();
+	}
 }
 
 //---------------------------------------------------------------------------------------------
