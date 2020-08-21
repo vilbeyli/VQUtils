@@ -32,7 +32,7 @@ const size_t ThreadPool::sHardwareThreadCount = std::thread::hardware_concurrenc
 static void RUN_THREAD_POOL_UNIT_TEST()
 {
 	ThreadPool p;
-	p.Initialize(ThreadPool::sHardwareThreadCount);
+	p.Initialize(ThreadPool::sHardwareThreadCount, "TEST POOL");
 
 	constexpr long long sz = 40000000;
 	auto sumRnd = [&]()
@@ -121,8 +121,9 @@ void Semaphore::Signal()
 	cv.notify_one();
 }
 
-void ThreadPool::Initialize(size_t numThreads)
+void ThreadPool::Initialize(size_t numThreads, const std::string& ThreadPoolName)
 {
+	mThreadPoolName = ThreadPoolName;
 	mbStopWorkers.store(false);
 	for (auto i = 0u; i < numThreads; ++i)
 	{
@@ -155,7 +156,8 @@ void ThreadPool::Execute()
 
 		if (mbStopWorkers)
 			break;
-
+		
+		// TODO: assertion hit: front() called on empty queue...
 		task = mTaskQueue.PopTask();
 		task();
 		mTaskQueue.OnTaskComplete();

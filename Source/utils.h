@@ -86,6 +86,14 @@ namespace DirectoryUtil
 	std::string	GetFileNameFromPath(const std::string& filePath);
 	std::string GetFileExtension(const std::string& filePath);
 	std::string GetCurrentPath();
+
+	// removes separators from a path and returns all the folder names in a vector
+	// e.g. "C:/Program Files/TestFolder" -> ["C:", "Program Files", "TestFolder"]
+	//
+	std::vector<std::string> GetFlattenedFolderHierarchy(const std::string& path);
+
+	// returns true of the given file exists.
+	//
 	bool		FileExists(const std::string& pathToFile);
 
 	// returns true if folder exists, false otherwise after creating the folder

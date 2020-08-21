@@ -192,6 +192,12 @@ namespace StrUtil
 
 namespace DirectoryUtil
 {
+	std::vector<std::string> GetFlattenedFolderHierarchy(const std::string& path)
+	{
+		std::string sanitizedPath = path;
+		std::replace(sanitizedPath.begin(), sanitizedPath.end(), '/', '\\');
+		return StrUtil::split(sanitizedPath, '\\');
+	}
 	std::string GetSpecialFolderPath(ESpecialFolder folder)
 	{
 #if _WIN32

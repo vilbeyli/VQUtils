@@ -122,7 +122,7 @@ class ThreadPool
 public:
 	const static size_t ThreadPool::sHardwareThreadCount;
 
-	void Initialize(size_t numWorkers);
+	void Initialize(size_t numWorkers, const std::string& ThreadPoolName);
 	void Exit();
 
 	inline int GetNumActiveTasks() const { return mTaskQueue.GetNumActiveTasks(); };
@@ -162,6 +162,7 @@ private:
 	std::atomic<bool>        mbStopWorkers;
 	TaskQueue                mTaskQueue;
 	std::vector<std::thread> mWorkers;
+	std::string              mThreadPoolName;
 };
 
 
@@ -221,14 +222,18 @@ template<class T>
 class ConcurrentQueue
 {
 public:
+	ConcurrentQueue(void (*pfnProcess)(T&)) : mpfnProcess(pfnProcess) {}
+
 	void Enqueue(const T& item);
 	void Enqueue(const T&& item);
 	T Dequeue();
 
+	void ProcessItems();
+
 private:
-	// consider compare_exchange?
-	mutable std::mutex mMtx;
+	mutable std::mutex mMtx; // if compare_exchange any better?
 	std::queue<T>      mQueue;
+	void (*mpfnProcess)(T&);
 };
 
 template<class T>
@@ -252,4 +257,19 @@ inline T ConcurrentQueue<T>::Dequeue()
 	T item = mQueue.front();
 	mQueue.pop();
 	return T;
+}
+
+template<class T>
+inline void ConcurrentQueue<T>::ProcessItems()
+{
+	if (!mpfnProcess)
+		return;
+	
+	std::unique_lock<std::mutex> lk(mMtx);
+	do
+	{
+		T& item = std::move(mQueue.front());
+		mQueue.pop();
+		mpfnProcess(item);
+	} while (!mQueue.empty());
 }

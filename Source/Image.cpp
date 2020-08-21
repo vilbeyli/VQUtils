@@ -80,12 +80,12 @@ Image Image::LoadFromFile(const char* pFilePath, bool bHDR)
     int NumImageComponents = 0;
     img.pData = bHDR
         ? (void*)stbi_loadf(pFilePath, &img.x, &img.y, &NumImageComponents, 4)
-        : (void*)stbi_load (pFilePath, &img.x, &img.y, &NumImageComponents, 0);
+        : (void*)stbi_load (pFilePath, &img.x, &img.y, &NumImageComponents, 4);
     if (img.pData == nullptr)
     {
         Log::Error("Error loading file: %s", pFilePath);
     }
-    img.BytesPerPixel = bHDR ? NumImageComponents * 6 /* RGB16F(6) vs RGBA16F(8) ?*/ : NumImageComponents;
+    img.BytesPerPixel = bHDR ? NumImageComponents * 6 /* RGB16F(6) vs RGBA16F(8) ?*/ : NumImageComponents * 8;
 
     if (img.pData && bHDR)
     {
