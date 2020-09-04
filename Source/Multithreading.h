@@ -124,7 +124,9 @@ public:
 	void Initialize(size_t numWorkers, const std::string& ThreadPoolName);
 	void Exit();
 
-	inline int GetNumActiveTasks() const { return mTaskQueue.GetNumActiveTasks(); };
+	inline int GetNumActiveTasks() const { return IsExiting() ? 0 : mTaskQueue.GetNumActiveTasks(); };
+
+	inline bool IsExiting() const { return mbStopWorkers.load(); }
 
 	// Adds a task to the thread pool and returns the std::future<> 
 	// containing the return type of the added task.
