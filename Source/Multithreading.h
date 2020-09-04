@@ -89,13 +89,12 @@ class TaskQueue
 public:
 	template<class T>
 	void AddTask(std::shared_ptr<T>& pTask);
-	Task PopTask();
+	bool TryPopTask(Task& task);
 
 	inline bool IsQueueEmpty()      const { std::unique_lock<std::mutex> lock(mutex); return queue.empty(); }
 	inline int  GetNumActiveTasks() const { return activeTasks; }
 
 	// must be called after Task() completes.
-	// TODO: can we do this with a callback mechanism somewhere?
 	inline void OnTaskComplete() { --activeTasks; }
 
 private:
@@ -115,10 +114,10 @@ inline void TaskQueue::AddTask(std::shared_ptr<T>& pTask)
 
 //
 // A Collection of threads picking up tasks from its queue and executes on threads
+// src: https://www.youtube.com/watch?v=eWTGtp3HXiw
 //
 class ThreadPool
 {
-	// src: https://www.youtube.com/watch?v=eWTGtp3HXiw
 public:
 	const static size_t ThreadPool::sHardwareThreadCount;
 
@@ -127,33 +126,12 @@ public:
 
 	inline int GetNumActiveTasks() const { return mTaskQueue.GetNumActiveTasks(); };
 
-	// Notes on C++11 Threading:
-	// ------------------------------------------------------------------------------------
-	// 
-	// To get a return value from an executing thread, we use std::packaged_task<> together
-	// with std::future to access the results later.
-	//
-	// e.g. http://en.cppreference.com/w/cpp/thread/packaged_task
-	// 
-	// ------------------------------------------------------------------------------------
-
 	// Adds a task to the thread pool and returns the std::future<> 
 	// containing the return type of the added task.
 	//
 	template<class T>
-	//std::future<decltype(task())> AddTask(T task)	// why doesn't this compile?
-	auto AddTask(T task) -> std::future<decltype(task())>
-	{
-		using typename task_return_t = decltype(task()); // return type of task
+	auto AddTask(T task) -> std::future<decltype(task())>;
 
-		// use a shared_ptr<> of packaged tasks here as we execute them in the thread pool workers as well
-		// as accesing its get_future() on the thread that calls this AddTask() function.
-		auto pTask = std::make_shared< std::packaged_task<task_return_t()>>(std::move(task));
-		mTaskQueue.AddTask(pTask);
-
-		mSignal.NotifyOne();
-		return pTask->get_future();
-	}
 
 private:
 	void Execute(); // workers run Execute();
@@ -165,6 +143,30 @@ private:
 	std::string              mThreadPoolName;
 };
 
+template<class T>
+auto ThreadPool::AddTask(T task)->std::future<decltype(task())>
+{
+	// Notes on C++11 Threading:
+	// ------------------------------------------------------------------------------------
+	// 
+	// To get a return value from an executing thread, we use std::packaged_task<> together
+	// with std::future to access the results later.
+	//
+	// e.g. http://en.cppreference.com/w/cpp/thread/packaged_task
+	// 
+	// ------------------------------------------------------------------------------------
+	using typename task_return_t = decltype(task()); // return type of task
+
+	// use a shared_ptr<> of packaged tasks here as we execute them in the thread pool workers as well
+	// as accesing its get_future() on the thread that calls this AddTask() function.
+	auto pTask = std::make_shared< std::packaged_task<task_return_t()>>(std::move(task));
+	mTaskQueue.AddTask(pTask);
+	//Log::Info("[%s] TaskQueue::AddTask()", this->mThreadPoolName.c_str());
+
+	mSignal.NotifyOne();
+	//Log::Info("[%s] Signal::NotifyOne()", this->mThreadPoolName.c_str());
+	return pTask->get_future();
+}
 
 // --------------------------------------------------------------------------------------------------------------------------------------
 //

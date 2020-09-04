@@ -149,28 +149,42 @@ void ThreadPool::Exit()
 void ThreadPool::Execute()
 {
 	Task task;
-	
+
 	while (!mbStopWorkers)
-	{		
+	{
 		mSignal.Wait([&] { return mbStopWorkers || !mTaskQueue.IsQueueEmpty(); });
 
 		if (mbStopWorkers)
 			break;
 		
-		// TODO: assertion hit: front() called on empty queue...
-		task = mTaskQueue.PopTask();
+		if (!mTaskQueue.TryPopTask(task))
+		{
+			// Spurious wake-ups can happen before a notify_one() is called on the mSignal.
+			// This means we can run into the following scenario:
+			//- We push one item to the mTaskQueue but we're yet to call NotifyOne() on mSignal on the producer thread
+			//- Random wake up of the thread(s) happens
+			//- mSignal.condition_variable.wait() no longer blocks as the queue is no longer empty
+			//- the first thread succeeds in TryPopTask(), but the rest of them will fail.
+			//- if we don't check for queue.empty() in TryPopTask(), then std::queue will throw 'front() called on empty queue'
+			continue;
+		}
+
 		task();
 		mTaskQueue.OnTaskComplete();
 	}
 }
 
-Task TaskQueue::PopTask()
+bool TaskQueue::TryPopTask(Task& task)
 {
-	Task t;
 	std::lock_guard<std::mutex> lk(mutex);
-	t = std::move(queue.front());
+	
+	if (queue.empty())
+		return false;
+	
+	task = std::move(queue.front());
 	queue.pop();
-	return t;
+
+	return true;
 }
 
 
