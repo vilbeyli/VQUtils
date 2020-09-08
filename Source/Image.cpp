@@ -85,7 +85,9 @@ Image Image::LoadFromFile(const char* pFilePath, bool bHDR)
     {
         Log::Error("Error loading file: %s", pFilePath);
     }
-    img.BytesPerPixel = bHDR ? NumImageComponents * 6 /* RGB16F(6) vs RGBA16F(8) ?*/ : NumImageComponents * 8;
+    img.BytesPerPixel = bHDR 
+        ? NumImageComponents * 4 // HDR=RGBA32F -> 16 Bytes/Pixel = 4 Bytes / component
+        : NumImageComponents;    // SDR=RGBA8   -> 4  Bytes/Pixel = 1 Byte  / component
 
     if (img.pData && bHDR)
     {
