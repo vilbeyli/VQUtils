@@ -107,7 +107,9 @@ namespace StrUtil
 	std::string trim(const std::string& s)
 	{
 		size_t end = s.find_last_not_of(" \n\r\t\f\v");
-		return (end == std::string::npos) ? "" : s.substr(0, end+1);
+		size_t begin = s.find_first_not_of(" \n\r\t\f\v");
+		size_t range = end + 1 - begin;
+		return (end == std::string::npos) ? "" : s.substr(begin, range);
 	}
 
 	void MakeLowercase(std::string& str)
