@@ -21,8 +21,11 @@
 struct Image
 {
     static Image LoadFromFile(const char* pFilePath, bool bHDR);
+    static Image CreateEmptyImage(size_t bytes);
 
     void Destroy();  // Destroy must be called following a LoadFromFile() to prevent memory leak
+
+    int CalculateMipLevelCount() const;
 
     union { int x; int Width; };
     union { int y; int Height; };

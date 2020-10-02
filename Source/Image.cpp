@@ -97,6 +97,13 @@ Image Image::LoadFromFile(const char* pFilePath, bool bHDR)
     return img;
 }
 
+Image Image::CreateEmptyImage(size_t bytes)
+{
+    Image img;
+    img.pData = (void*)malloc(bytes);
+    return img;
+}
+
 void Image::Destroy()
 { 
 	if (pData) 
@@ -106,3 +113,19 @@ void Image::Destroy()
 	} 
 }
 
+int Image::CalculateMipLevelCount() const
+{
+    int w = this->Width;
+    int h = this->Height;
+
+    int mips = 0;
+
+    while (w >= 1 && h >= 1)
+    {
+        ++mips;
+        w >>= 1;
+        h >>= 1;
+    }
+
+    return mips;
+}
