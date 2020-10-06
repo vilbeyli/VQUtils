@@ -113,19 +113,14 @@ void Image::Destroy()
 	} 
 }
 
-int Image::CalculateMipLevelCount() const
+int Image::CalculateMipLevelCount(int w, int h)
 {
-    int w = this->Width;
-    int h = this->Height;
-
     int mips = 0;
-
     while (w >= 1 && h >= 1)
     {
         ++mips;
         w >>= 1;
         h >>= 1;
     }
-
     return mips;
 }

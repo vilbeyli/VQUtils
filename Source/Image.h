@@ -25,7 +25,8 @@ struct Image
 
     void Destroy();  // Destroy must be called following a LoadFromFile() to prevent memory leak
 
-    int CalculateMipLevelCount() const;
+    static int CalculateMipLevelCount(int w, int h);
+    inline int CalculateMipLevelCount() const { return CalculateMipLevelCount(this->Width, this->Height); };
 
     union { int x; int Width; };
     union { int y; int Height; };

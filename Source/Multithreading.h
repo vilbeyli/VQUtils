@@ -272,7 +272,7 @@ inline void ConcurrentQueue<T>::ProcessItems()
 	std::unique_lock<std::mutex> lk(mMtx);
 	do
 	{
-		T& item = std::move(mQueue.front());
+		T&& item = std::move(mQueue.front());
 		mQueue.pop();
 		mpfnProcess(item);
 	} while (!mQueue.empty());
