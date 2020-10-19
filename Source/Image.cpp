@@ -113,7 +113,7 @@ void Image::Destroy()
 	} 
 }
 
-int Image::CalculateMipLevelCount(int w, int h)
+unsigned short Image::CalculateMipLevelCount(unsigned __int64 w, unsigned __int64 h)
 {
     int mips = 0;
     while (w >= 1 && h >= 1)
