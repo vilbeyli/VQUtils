@@ -55,6 +55,14 @@ namespace StrUtil
 	using std::cout;
 	using std::endl;
 
+	bool IsNumber(const std::string& s)
+	{
+		// https://stackoverflow.com/a/4654718/2034041
+		std::string::const_iterator it = s.begin();
+		while (it != s.end() && std::isdigit(*it)) ++it;
+		return !s.empty() && it == s.end();
+	}
+
 	vector<string> split(const char* s, char c)
 	{
 		vector<string> result;

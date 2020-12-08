@@ -34,7 +34,8 @@
 
 namespace StrUtil
 {
-		
+	bool IsNumber(const std::string& s);
+
 	inline bool  ParseBool (const std::string& s) { bool b; std::istringstream(s) >> std::boolalpha >> b; return b; }
 	inline int   ParseInt  (const std::string& s) { return std::atoi(s.c_str()); }
 	inline float ParseFloat(const std::string& s) { return static_cast<float>(std::atof(s.c_str())); }
