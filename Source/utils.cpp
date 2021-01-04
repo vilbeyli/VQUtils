@@ -321,6 +321,9 @@ namespace DirectoryUtil
 
 	bool IsFileNewer(const std::string & file0, const std::string & file1)
 	{
+		if (!DirectoryUtil::FileExists(file0)) { Log::Warning("DirectoryUtils::IsFileNewer(): File %s doesn't exist", file0.c_str()); return false; }
+		if (!DirectoryUtil::FileExists(file1)) { Log::Warning("DirectoryUtils::IsFileNewer(): File %s doesn't exist", file1.c_str()); return true;  }
+
 #if _MSVC_LANG >= 201703L // CPP17 
 		return filesys::last_write_time(file0) > filesys::last_write_time(file1);
 #else
