@@ -44,3 +44,5 @@ bld/
 [Ll]og/
 
 Build/SolutionFiles/*
+
+.vscode/
