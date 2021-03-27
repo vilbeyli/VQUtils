@@ -1,5 +1,6 @@
 # VQUtils
-A Collection of Windows/C++ Utility functions on string manipulation/formatting, date/time, logging, etc.
+
+A Collection of Windows C++ utility functions for querying system info, string manipulation & formatting, date/time, logging, timer, etc.
 
 ## Feature List
 
