@@ -128,7 +128,7 @@ Image Image::DownsizeToHalfResolution(const Image& img)
     assert(TargetW > 0 && TargetH > 0);
 
     int TargetResolution = TargetH * TargetW;
-    int TargetImageSizeInBytes = TargetResolution * img.IsHDR() ? 16 : 4; // HDR is 16bytes/px (RGBA32F), SDR is 4bytes/px (RGBA8)
+    int TargetImageSizeInBytes = TargetResolution * (img.IsHDR() ? 16 : 4); // HDR is 16bytes/px (RGBA32F), SDR is 4bytes/px (RGBA8)
     assert(TargetImageSizeInBytes > 0);
 
     // create downsample image
