@@ -88,6 +88,8 @@ namespace DirectoryUtil
 	std::string GetFileExtension(const std::string& filePath);
 	std::string GetCurrentPath();
 
+	std::vector<std::string> GetFilesInPath(const std::string& path);
+
 	// removes separators from a path and returns all the folder names in a vector
 	// e.g. "C:/Program Files/TestFolder" -> ["C:", "Program Files", "TestFolder"]
 	//
@@ -108,7 +110,7 @@ namespace DirectoryUtil
 
 	// returns true if the given @pathToImageFile ends with .jpg, .png or .hdr
 	//
-	bool		IsImageName(const std::string& pathToImageFile);
+	bool		IsImageFile(const std::string& pathToImageFile);
 
 	// returns true if @file0 has been written into later than @file1 has.
 	//

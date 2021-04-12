@@ -18,12 +18,22 @@
 
 #include "Image.h"
 #include "Log.h"
+#include "utils.h"
 
 #define STB_IMAGE_IMPLEMENTATION
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#define STB_IMAGE_RESIZE_IMPLEMENTATION
 #include "../Libs/stb/stb_image.h"
+#include "../Libs/stb/stb_image_write.h"
+#include "../Libs/stb/stb_image_resize.h"
 
 #include <vector>
+#include <set>
 #include <cmath>
+#include <cassert>
+
+static const std::set<std::string> S_HDR_FORMATS = { "hdr", /*"exr"*/ };
+static bool IsHDRFileExtension(const std::string& ext) { return S_HDR_FORMATS.find(ext) != S_HDR_FORMATS.end(); }
 
 static float CalculateMaxLuminance(const float* pData, int width, int height, int numComponents)
 {
@@ -73,10 +83,17 @@ static float CalculateMaxLuminance(const float* pData, int width, int height, in
     return MaxLuminance;
 }
 
-Image Image::LoadFromFile(const char* pFilePath, bool bHDR)
+Image Image::LoadFromFile(const char* pFilePath)
 {
-    Image img;
     constexpr int reqComp = 0;
+    
+    const std::string Extension = DirectoryUtil::GetFileExtension(pFilePath);
+
+    assert(Extension != "exr"); // TODO: add exr loading support to Image class
+    const bool bHDR = IsHDRFileExtension(Extension);
+    
+    Image img;
+
     int NumImageComponents = 0;
     img.pData = bHDR
         ? (void*)stbi_loadf(pFilePath, &img.x, &img.y, &NumImageComponents, 4)
@@ -102,6 +119,82 @@ Image Image::CreateEmptyImage(size_t bytes)
     Image img;
     img.pData = (void*)malloc(bytes);
     return img;
+}
+
+Image Image::DownsizeToHalfResolution(const Image& img)
+{
+    int TargetW = img.Width >> 1;
+    int TargetH = img.Height >> 1;
+    assert(TargetW > 0 && TargetH > 0);
+
+    int TargetResolution = TargetH * TargetW;
+    int TargetImageSizeInBytes = TargetResolution * img.IsHDR() ? 16 : 4; // HDR is 16bytes/px (RGBA32F), SDR is 4bytes/px (RGBA8)
+    assert(TargetImageSizeInBytes > 0);
+
+    // create downsample image
+    Image NewImage = CreateEmptyImage(TargetImageSizeInBytes);
+
+    // 'resize' input image
+    int rc = 0;
+    if (img.IsHDR())
+    {
+        const int NUM_CHANNELS = 4; // RGBA
+        const int STRIDE_BYTES_INPUT  = 0;
+        const int STRIDE_BYTES_OUTPUT = 0;
+        rc = stbir_resize_float(reinterpret_cast<const float*>(img.pData     ), img.Width, img.Height, STRIDE_BYTES_INPUT,
+                                reinterpret_cast<      float*>(NewImage.pData), TargetW  , TargetH   , STRIDE_BYTES_OUTPUT,
+                                NUM_CHANNELS
+        );
+    }
+    else
+    {
+        rc = -1;
+        assert(false); // TODO: impl
+    }
+
+    if (rc <= 0)
+    {
+        Log::Error("Error resizing image ");
+    }
+    else
+    {
+        NewImage.Width = TargetW;
+        NewImage.Height = TargetH;
+        NewImage.MaxLuminance = img.MaxLuminance;
+        NewImage.BytesPerPixel = img.BytesPerPixel;
+    }
+
+    return NewImage;
+}
+
+bool Image::SaveToDisk(const char* pStrPath) const
+{
+    if (this->GetSizeInBytes() == 0)
+    {
+        Log::Warning("Image::SaveToDisk() failed: ImageSize=0 : %s", pStrPath);
+        return false;
+    }
+
+    const std::string Folder = DirectoryUtil::GetFolderPath(pStrPath);
+    DirectoryUtil::CreateFolderIfItDoesntExist(Folder);
+
+    const std::string Extension = DirectoryUtil::GetFileExtension(pStrPath);
+    const bool bHDR = IsHDRFileExtension(Extension);
+
+    int rc = 0;
+    if (bHDR)
+    {
+        const int comp = 4; // HDR is 4 bytes / component (RGBA32F)
+        rc = stbi_write_hdr(pStrPath, this->x, this->y, comp, reinterpret_cast<const float*>(this->pData));
+    }
+    else
+    {
+        assert(false); // TODO: test
+        const int comp = this->BytesPerPixel;
+        rc = stbi_write_png(pStrPath, this->x, this->y, comp, this->pData, 0); 
+    }
+
+    return rc != 0; // 0 is err?
 }
 
 void Image::Destroy()

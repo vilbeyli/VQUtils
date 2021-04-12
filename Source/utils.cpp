@@ -202,6 +202,19 @@ namespace StrUtil
 
 namespace DirectoryUtil
 {
+	std::vector<std::string> GetFilesInPath(const std::string& path)
+	{
+		constexpr size_t MAX_FILE_PATH_LENGTH = 300;
+
+		std::vector<std::string> files;
+		for (const auto& entry : filesys::directory_iterator(path))
+		{
+			std::string filePath = StrUtil::UnicodeToASCII<MAX_FILE_PATH_LENGTH>(entry.path().c_str());
+			files.push_back(filePath);
+		}
+		return files;
+	}
+
 	std::vector<std::string> GetFlattenedFolderHierarchy(const std::string& path)
 	{
 		std::string sanitizedPath = path;
@@ -245,7 +258,7 @@ namespace DirectoryUtil
 		return path;
 	}
 
-	bool IsImageName(const std::string & str)
+	bool IsImageFile(const std::string & str)
 	{
 		std::vector<std::string> FileNameAndExtension = StrUtil::split(str, '.');
 		if (FileNameAndExtension.size() < 2)
