@@ -23,7 +23,8 @@ struct Image
     static Image LoadFromFile(const char* pFilePath);
     static Image CreateEmptyImage(size_t bytes);
 
-    static Image DownsizeToHalfResolution(const Image& img);
+    static Image CreateResizedImage(const Image& img, unsigned TargetWidth, unsigned TargetHeight);
+    inline static Image CreateHalfResolutionFromImage(const Image& img) { return CreateResizedImage(img, img.x >> 1, img.y >> 1); }
 
     bool SaveToDisk(const char* pStrPath) const;
     void Destroy();  // Destroy must be called following a LoadFromFile() to prevent memory leak
@@ -39,5 +40,5 @@ struct Image
     union { int y; int Height; };
     int BytesPerPixel = 0;
     void* pData = nullptr;
-    float MaxLuminance;
+    float MaxLuminance = 0.0f;
 };

@@ -121,14 +121,11 @@ Image Image::CreateEmptyImage(size_t bytes)
     return img;
 }
 
-Image Image::DownsizeToHalfResolution(const Image& img)
+Image Image::CreateResizedImage(const Image& img, unsigned TargetWidth, unsigned TargetHeight)
 {
-    int TargetW = img.Width >> 1;
-    int TargetH = img.Height >> 1;
-    assert(TargetW > 0 && TargetH > 0);
-
-    int TargetResolution = TargetH * TargetW;
-    int TargetImageSizeInBytes = TargetResolution * (img.IsHDR() ? 16 : 4); // HDR is 16bytes/px (RGBA32F), SDR is 4bytes/px (RGBA8)
+    assert(TargetWidth > 0 && TargetHeight > 0);
+    const int TargetResolution = TargetHeight * TargetWidth;
+    const int TargetImageSizeInBytes = TargetResolution * (img.IsHDR() ? 16 : 4); // HDR is 16bytes/px (RGBA32F), SDR is 4bytes/px (RGBA8)
     assert(TargetImageSizeInBytes > 0);
 
     // create downsample image
@@ -139,10 +136,10 @@ Image Image::DownsizeToHalfResolution(const Image& img)
     if (img.IsHDR())
     {
         const int NUM_CHANNELS = 4; // RGBA
-        const int STRIDE_BYTES_INPUT  = 0;
+        const int STRIDE_BYTES_INPUT = 0;
         const int STRIDE_BYTES_OUTPUT = 0;
-        rc = stbir_resize_float(reinterpret_cast<const float*>(img.pData     ), img.Width, img.Height, STRIDE_BYTES_INPUT,
-                                reinterpret_cast<      float*>(NewImage.pData), TargetW  , TargetH   , STRIDE_BYTES_OUTPUT,
+        rc = stbir_resize_float(reinterpret_cast<const float*>(     img.pData),   img.Width,   img.Height, STRIDE_BYTES_INPUT,
+                                reinterpret_cast<      float*>(NewImage.pData), TargetWidth, TargetHeight, STRIDE_BYTES_OUTPUT,
                                 NUM_CHANNELS
         );
     }
@@ -158,8 +155,8 @@ Image Image::DownsizeToHalfResolution(const Image& img)
     }
     else
     {
-        NewImage.Width = TargetW;
-        NewImage.Height = TargetH;
+        NewImage.Width = TargetWidth;
+        NewImage.Height = TargetHeight;
         NewImage.MaxLuminance = img.MaxLuminance;
         NewImage.BytesPerPixel = img.BytesPerPixel;
     }
