@@ -132,6 +132,14 @@ namespace StrUtil
 		return lowercased;
 	}
 
+	std::string GetUppercased(const std::string& str)
+	{
+		std::string uppercased(str.size(), '\0');
+		std::transform(str.begin(), str.end(), uppercased.begin(), [](unsigned char c) { return std::toupper(c); });
+		return uppercased;
+	}
+
+
 	std::string CommaSeparatedNumber(const std::string& num)
 	{
 		std::string _num = "";
@@ -161,6 +169,7 @@ namespace StrUtil
 		return std::string(wstr.begin(), wstr.end());  // results in warning in C++17
 #endif
 	}
+
 	std::string FormatByte(unsigned long long bytes)
 	{
 		constexpr unsigned long long KILOBYTE = 1024ull;
