@@ -328,17 +328,27 @@ namespace DirectoryUtil
 
 	bool CreateFolderIfItDoesntExist(const std::string& directoryPath)
 	{
-		if (CreateDirectory(directoryPath.c_str(), NULL) || ERROR_ALREADY_EXISTS == GetLastError())
+		bool bSuccess = true;
+		std::vector<std::string> FolderNames = DirectoryUtil::GetFlattenedFolderHierarchy(directoryPath);
+		std::string parentFolder = "";
+		for (const std::string& FolderName : FolderNames)
 		{
-			;// directory either successfully created or already exists: NOP
-			return true;
+			const std::string FolderPath = parentFolder.empty() ? FolderName : (parentFolder + "/" + FolderName);
+			if (CreateDirectory(FolderPath.c_str(), NULL) || ERROR_ALREADY_EXISTS == GetLastError()) // note: this fails to detect a failure in case "/FolderName" 
+			{
+				;// directory either successfully created or already exists: NOP
+				bSuccess &= true; 
+			}
+			else
+			{
+				bSuccess = false;
+				std::string errMsg = "Failed to create directory: " + FolderPath;
+				MessageBox(NULL, errMsg.c_str(), "Error Creating Folder", MB_OK);
+				return false;
+			}
+			parentFolder = FolderPath;
 		}
-		else
-		{
-			std::string errMsg = "Failed to create directory: " + directoryPath;
-			MessageBox(NULL, errMsg.c_str(), "Error Creating Folder", MB_OK);
-			return false;
-		}
+		return bSuccess;
 	}
 
 	bool IsFileNewer(const std::string & file0, const std::string & file1)
