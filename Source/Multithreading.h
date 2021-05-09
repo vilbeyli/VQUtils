@@ -208,6 +208,11 @@ public:
 		std::unique_lock<std::mutex> lk(mMtx);
 		iBuffer ^= 1; 
 	}
+	bool IsEmpty() const
+	{
+		std::unique_lock<std::mutex> lk(mMtx);
+		return mBufferPool[iBuffer].empty();
+	}
 private:
 	mutable std::mutex mMtx;
 	std::array<TContainer, 2> mBufferPool;

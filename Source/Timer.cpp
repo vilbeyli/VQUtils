@@ -55,7 +55,7 @@ float Timer::DeltaTime() const
 
 void Timer::Reset()
 {
-	baseTime = prevTime = GetNow();
+	baseTime = prevTime = currTime = startTime = stopTime = GetNow();
 	bIsStopped = true;
 	dt = Duration::zero();
 }
