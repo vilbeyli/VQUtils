@@ -125,6 +125,7 @@ public:
 	void Exit();
 
 	inline int GetNumActiveTasks() const { return IsExiting() ? 0 : mTaskQueue.GetNumActiveTasks(); };
+	inline size_t GetThreadPoolSize() const { return mWorkers.size(); }
 
 	inline bool IsExiting() const { return mbStopWorkers.load(); }
 
