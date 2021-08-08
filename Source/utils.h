@@ -132,7 +132,7 @@ std::string GetCurrentTimeAsStringWithBrackets();
 
 
 
-
+#include <utility>
 namespace MathUtil
 {
 	template<class T> inline T lerp(T low, T high, float t) { return low + static_cast<T>((high - low) * t); }
@@ -145,8 +145,8 @@ namespace MathUtil
 	}
 	template<class T> void Clamp(T& val, const T lo, const T hi)
 	{
-		val = min(val, lo);
-		val = max(val, hi);
+		val = std::min(val, hi);
+		val = std::max(val, lo);
 	}
 	template<class T> T Clamp(const T& val, const T lo, const T hi)
 	{
