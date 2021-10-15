@@ -59,7 +59,7 @@ namespace StrUtil
 	std::string  CommaSeparatedNumber(const std::string& num);
 
 	       std::string  UnicodeToASCII(const PWSTR pwstr); // https://codingtidbit.com/2020/02/09/c17-codecvt_utf8-is-deprecated/
-	inline std::string  UnicodeToASCII(const std::wstring& wstr) { return UnicodeToASCII(wstr.c_str()); }
+	//inline std::string  UnicodeToASCII(const std::wstring& wstr) { return UnicodeToASCII(wstr.c_str()); }
 	inline std::wstring ASCIIToUnicode(const std::string& str) { return std::wstring(str.begin(), str.end()); }
 
 	template<unsigned STR_SIZE>
