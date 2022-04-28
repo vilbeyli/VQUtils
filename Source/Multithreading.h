@@ -122,7 +122,7 @@ public:
 	const static size_t ThreadPool::sHardwareThreadCount;
 
 	void Initialize(size_t numWorkers, const std::string& ThreadPoolName);
-	void Exit();
+	void Destroy();
 
 	inline int GetNumActiveTasks() const { return IsExiting() ? 0 : mTaskQueue.GetNumActiveTasks(); };
 	inline size_t GetThreadPoolSize() const { return mWorkers.size(); }

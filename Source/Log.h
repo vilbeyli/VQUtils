@@ -58,7 +58,7 @@ namespace Log
 	//---------------------------------------------------------------------------------------------
 
 	void Initialize(const LogInitializeParams& params);
-	void Exit();
+	void Destroy();
 
 	void Info(const std::string& s);
 	void Error(const std::string& s);

@@ -134,7 +134,7 @@ void ThreadPool::Initialize(size_t numThreads, const std::string& ThreadPoolName
 	RUN_THREAD_POOL_UNIT_TEST();
 #endif
 }
-void ThreadPool::Exit()
+void ThreadPool::Destroy()
 {
 	mbStopWorkers.store(true);
 

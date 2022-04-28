@@ -187,7 +187,7 @@ void Initialize(const LogInitializeParams& params)
 #endif
 }
 
-void Exit()
+void Destroy()
 {
 	std::string msg = GetCurrentTimeAsStringWithBrackets() + "[Log] Exit()";
 	if (sOutFile.is_open())
