@@ -22,6 +22,7 @@
 #include "Utils.h"
 #include "Log.h"
 
+#include <cassert>
 #include <algorithm>
 
 #define RUN_THREADPOOL_UNIT_TEST 0
@@ -187,4 +188,28 @@ bool TaskQueue::TryPopTask(Task& task)
 	return true;
 }
 
+std::vector<std::pair<size_t, size_t>> PartitionWorkItemsIntoRanges(size_t NumWorkItems, size_t NumWorkerThreadCount)
+{
+	// @NumWorkItems is distributed as equally as possible between all @NumWorkerThreadCount threads.
+	// Two numbers are determined
+	// - NumWorkItemPerThread: number of work items each thread will get equally
+	// - NumWorkItemPerThread_Extra : number of +1's to be added to each worker
+	const size_t NumWorkItemPerThread = NumWorkItems / NumWorkerThreadCount; // amount of work each worker is to get, 
+	const size_t NumWorkItemPerThread_Extra = NumWorkItems % NumWorkerThreadCount;
 
+	std::vector<std::pair<size_t, size_t>> vRanges(NumWorkItemPerThread == 0
+		? NumWorkItems  // if NumWorkItems < NumWorkerThreadCount, then only create ranges according to NumWorkItems
+		: NumWorkerThreadCount // each worker thread gets a range
+	);
+
+	size_t iRange = 0;
+	for (auto& range : vRanges)
+	{
+		range.first = iRange != 0 ? vRanges[iRange - 1].second + 1 : 0;
+		range.second = range.first + NumWorkItemPerThread - 1 + (NumWorkItemPerThread_Extra > iRange ? 1 : 0);
+		assert(range.first <= range.second); // ensure work context bounds
+		++iRange;
+	}
+
+	return vRanges;
+}

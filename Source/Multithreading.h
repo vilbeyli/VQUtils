@@ -171,6 +171,8 @@ auto ThreadPool::AddTask(T task)->std::future<decltype(task())>
 	return pTask->get_future();
 }
 
+std::vector<std::pair<size_t, size_t>> PartitionWorkItemsIntoRanges(size_t NumWorkItems, size_t NumWorkerThreadCount);
+
 // --------------------------------------------------------------------------------------------------------------------------------------
 //
 // Buffered Container
