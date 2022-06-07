@@ -172,6 +172,8 @@ auto ThreadPool::AddTask(T task)->std::future<decltype(task())>
 }
 
 std::vector<std::pair<size_t, size_t>> PartitionWorkItemsIntoRanges(size_t NumWorkItems, size_t NumWorkerThreadCount);
+size_t CalculateNumThreadsToUse(const size_t NumWorkItems, const size_t NumWorkerThreads, const size_t NumMinimumWorkItemCountPerThread);
+
 
 // --------------------------------------------------------------------------------------------------------------------------------------
 //

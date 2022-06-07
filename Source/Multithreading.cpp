@@ -213,3 +213,18 @@ std::vector<std::pair<size_t, size_t>> PartitionWorkItemsIntoRanges(size_t NumWo
 
 	return vRanges;
 }
+
+size_t CalculateNumThreadsToUse(const size_t NumWorkItems, const size_t NumWorkerThreads, const size_t NumMinimumWorkItemCountPerThread)
+{
+#define DIV_AND_ROUND_UP(x, y) ((x+y-1)/(y))
+	const size_t NumWorkItemsPerAvailableWorkerThread = DIV_AND_ROUND_UP(NumWorkItems, NumWorkerThreads);
+	size_t NumWorkerThreadsToUse = NumWorkerThreads;
+	if (NumWorkItemsPerAvailableWorkerThread < NumMinimumWorkItemCountPerThread)
+	{
+		const float OffRatio = float(NumMinimumWorkItemCountPerThread) / float(NumWorkItemsPerAvailableWorkerThread);
+		NumWorkerThreadsToUse = static_cast<size_t>(NumWorkerThreadsToUse / OffRatio); // clamp down
+		NumWorkerThreadsToUse = std::max((size_t)0, NumWorkerThreadsToUse);
+	}
+	return NumWorkerThreadsToUse;
+}
+
