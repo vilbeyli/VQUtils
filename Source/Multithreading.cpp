@@ -122,8 +122,9 @@ void Semaphore::Signal()
 	cv.notify_one();
 }
 
-void ThreadPool::Initialize(size_t numThreads, const std::string& ThreadPoolName)
+void ThreadPool::Initialize(size_t numThreads, const std::string& ThreadPoolName, unsigned int MarkerColor)
 {
+	mMarkerColor = MarkerColor;
 	mThreadPoolName = ThreadPoolName;
 	mbStopWorkers.store(false);
 	for (auto i = 0u; i < numThreads; ++i)

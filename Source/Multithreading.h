@@ -121,11 +121,14 @@ class ThreadPool
 public:
 	const static size_t ThreadPool::sHardwareThreadCount;
 
-	void Initialize(size_t numWorkers, const std::string& ThreadPoolName);
+	void Initialize(size_t numWorkers, const std::string& ThreadPoolName, unsigned int MarkerColor = 0xFFAAAAAA);
 	void Destroy();
 
 	inline int GetNumActiveTasks() const { return IsExiting() ? 0 : mTaskQueue.GetNumActiveTasks(); };
 	inline size_t GetThreadPoolSize() const { return mWorkers.size(); }
+	
+	inline std::string GetThreadPoolName() const { return mThreadPoolName; }
+	inline std::string GetThreadPoolWorkerName() const { return mThreadPoolName + "_Worker"; }
 
 	inline bool IsExiting() const { return mbStopWorkers.load(); }
 
@@ -135,7 +138,6 @@ public:
 	template<class T>
 	auto AddTask(T task) -> std::future<decltype(task())>;
 
-
 private:
 	void Execute(); // workers run Execute();
 
@@ -144,6 +146,9 @@ private:
 	TaskQueue                mTaskQueue;
 	std::vector<std::thread> mWorkers;
 	std::string              mThreadPoolName;
+
+public:
+	unsigned int             mMarkerColor;
 };
 
 template<class T>
