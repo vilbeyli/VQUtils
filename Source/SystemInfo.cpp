@@ -30,6 +30,7 @@
 #include <algorithm>
 #include <sstream>
 #include <iomanip>
+#include <set>
 
 #define VERBOSE_LOGGING 0
 #if VERBOSE_LOGGING
@@ -508,30 +509,8 @@ std::vector<FMonitorInfo> GetDisplayInfo()
 			++iModeNum;
 		}
 
-		if constexpr (DISPLAY_DEVICE_NAME__READ_REGISTRY)
-		{
-			constexpr char* DISPLAY_NAME_ENUMS_REGISTRY_PATH_FROM_HKEY_LOCAL_MACHINE = "SYSTEM\\CurrentControlSet\\Enum\\DISPLAY";
-			// Here in the registry root, we'll see part of device.DisplayID as folders, e.g.
-			// DisplayID is generated per driver version, and look like: MONITOR\\ACR0414\\<driver hash>
-			// Hence, we'll see monitor identifiers as folders like:
-			// - ACR0414 - Acer ...
-			// - DELA0DC - Dell ...
-			// - DELA0EA - Dell ...
-			std::vector<std::string> tokens = StrUtil::split(device.DeviceID, '\\');
-			assert(tokens.size() >= 4);
-			const std::string& MONITOR = tokens[0];           // "MONIOTOR"
-			const std::string& MonitorCode = tokens[1];       // "ACR0414"
-			const std::string& DriverHash = tokens[2];        // <driver hash:base>
-			const std::string& DriverVersionHash = tokens[3]; // <driver hash:version>
-			const std::string DisplayDriverHashCombinationToMatch = DriverHash + "\\" + DriverVersionHash; // essentially recreate the <driver hash>
-
-			const std::string RegistryPath_MonitorCode = DISPLAY_NAME_ENUMS_REGISTRY_PATH_FROM_HKEY_LOCAL_MACHINE + std::string("\\") + MonitorCode + std::string("\\");
-			FindAndDecodeEDID(RegistryPath_MonitorCode, DisplayDriverHashCombinationToMatch, i.DeviceName);
-
-			// Finally, EDID string might contain newlines and spaces after the string ends so process it here
-			i.DeviceName = StrUtil::trim(i.DeviceName);
-		}
-		else if constexpr (DISPLAY_DEVICE_NAME__USE_DISPLAY_INFO_API)
+		
+		if constexpr (DISPLAY_DEVICE_NAME__USE_DISPLAY_INFO_API)
 		{
 			// TODO: figure out how to use the UWP library
 			//Windows::Devices::Display::DisplayMonitor;
@@ -598,8 +577,50 @@ std::vector<FMonitorInfo> GetDisplayInfo()
 			pOutput->QueryInterface(IID_PPV_ARGS(&pOut)); 
 			pOut->GetDesc1(&desc);
 
-			FMonitorInfo& i = monitors[iMonitor];
+			FMonitorInfo& i = [](const DXGI_OUTPUT_DESC1& desc, const std::vector<FMonitorInfo>& monitors)
+			{
+				for (int i = 0; i < monitors.size(); ++i)
+				{
+					std::vector<std::string> tokens_m = StrUtil::split(monitors[i].DeviceName, { '\\', '.' });
+					std::vector<std::string> tokens_d = StrUtil::split(StrUtil::UnicodeToASCII<256>(desc.DeviceName), { '\\', '.' });
+					{
+						std::set<std::string> s0(tokens_m.begin(), tokens_m.end());
+						std::set<std::string> s1(tokens_d.begin(), tokens_d.end());
+						tokens_m.clear();
+						std::set_intersection(s0.begin(), s0.end(), s1.begin(), s1.end(), std::back_inserter(tokens_m));
+						if (!tokens_m.empty())
+						{
+							return monitors[i];
+						}
+					}
+				}
+				return FMonitorInfo(); // this should never happen, we expect to have a match with 'DISPLAY#' string in the tokens
+			}(desc, monitors);
+
 			i.LogicalDeviceName = StrUtil::UnicodeToASCII(desc.DeviceName);
+			if constexpr (DISPLAY_DEVICE_NAME__READ_REGISTRY)
+			{
+				constexpr char* DISPLAY_NAME_ENUMS_REGISTRY_PATH_FROM_HKEY_LOCAL_MACHINE = "SYSTEM\\CurrentControlSet\\Enum\\DISPLAY";
+				// Here in the registry root, we'll see part of device.DisplayID as folders, e.g.
+				// DisplayID is generated per driver version, and look like: MONITOR\\ACR0414\\<driver hash>
+				// Hence, we'll see monitor identifiers as folders like:
+				// - ACR0414 - Acer ...
+				// - DELA0DC - Dell ...
+				// - DELA0EA - Dell ...
+				std::vector<std::string> tokens = StrUtil::split(i.DeviceID, '\\');
+				assert(tokens.size() >= 4);
+				const std::string& MONITOR = tokens[0];           // "MONIOTOR"
+				const std::string& MonitorCode = tokens[1];       // "ACR0414"
+				const std::string& DriverHash = tokens[2];        // <driver hash:base>
+				const std::string& DriverVersionHash = tokens[3]; // <driver hash:version>
+				const std::string DisplayDriverHashCombinationToMatch = DriverHash + "\\" + DriverVersionHash; // essentially recreate the <driver hash>
+
+				const std::string RegistryPath_MonitorCode = DISPLAY_NAME_ENUMS_REGISTRY_PATH_FROM_HKEY_LOCAL_MACHINE + std::string("\\") + MonitorCode + std::string("\\");
+				FindAndDecodeEDID(RegistryPath_MonitorCode, DisplayDriverHashCombinationToMatch, i.DeviceName);
+
+				// Finally, EDID string might contain newlines and spaces after the string ends so process it here
+				i.DeviceName = StrUtil::trim(i.DeviceName);
+			}
 			switch (desc.Rotation)
 			{
 			case DXGI_MODE_ROTATION_IDENTITY   : i.RotationDegrees = 0; break;
@@ -618,7 +639,6 @@ std::vector<FMonitorInfo> GetDisplayInfo()
 			pOut->Release();
 			pOutput->Release();
 		}
-
 
 		pAdapter->Release();
 		++iAdapter;
