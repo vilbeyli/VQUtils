@@ -122,6 +122,12 @@ void Semaphore::Signal()
 	cv.notify_one();
 }
 
+static void SetThreadName(std::thread& th, const wchar_t* threadName) {
+	HRESULT hr = SetThreadDescription(th.native_handle(), threadName);
+	if (FAILED(hr)) {
+		// Handle error if needed
+	}
+}
 void ThreadPool::Initialize(size_t numThreads, const std::string& ThreadPoolName, unsigned int MarkerColor)
 {
 	mMarkerColor = MarkerColor;
@@ -130,6 +136,7 @@ void ThreadPool::Initialize(size_t numThreads, const std::string& ThreadPoolName
 	for (auto i = 0u; i < numThreads; ++i)
 	{
 		mWorkers.emplace_back(std::thread(&ThreadPool::Execute, this));
+		SetThreadName(mWorkers.back(), StrUtil::ASCIIToUnicode(ThreadPoolName).c_str());
 	}
 
 #if RUN_THREADPOOL_UNIT_TEST
