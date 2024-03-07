@@ -231,7 +231,7 @@ size_t CalculateNumThreadsToUse(const size_t NumWorkItems, const size_t NumWorke
 	{
 		const float OffRatio = float(NumMinimumWorkItemCountPerThread) / float(NumWorkItemsPerAvailableWorkerThread);
 		NumWorkerThreadsToUse = static_cast<size_t>(NumWorkerThreadsToUse / OffRatio); // clamp down
-		NumWorkerThreadsToUse = std::max((size_t)0, NumWorkerThreadsToUse);
+		NumWorkerThreadsToUse = std::max((size_t)1, NumWorkerThreadsToUse);
 	}
 	return NumWorkerThreadsToUse;
 }
