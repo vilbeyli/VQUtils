@@ -27,12 +27,17 @@
 #include "../Libs/stb/stb_image_write.h"
 #include "../Libs/stb/stb_image_resize.h"
 
+#include "../Libs/miniz/miniz.h"
+#define TINYEXR_USE_MINIZ 0
+#define TINYEXR_IMPLEMENTATION
+#include "../Libs/tinyexr/tinyexr.h"
+
 #include <vector>
 #include <set>
 #include <cmath>
 #include <cassert>
 
-static const std::set<std::string> S_HDR_FORMATS = { "hdr", /*"exr"*/ };
+static const std::set<std::string> S_HDR_FORMATS = { "hdr", "exr" };
 static bool IsHDRFileExtension(const std::string& ext) { return S_HDR_FORMATS.find(ext) != S_HDR_FORMATS.end(); }
 
 static float CalculateMaxLuminance(const float* pData, int width, int height, int numComponents)
@@ -86,18 +91,38 @@ static float CalculateMaxLuminance(const float* pData, int width, int height, in
 Image Image::LoadFromFile(const char* pFilePath)
 {
     constexpr int reqComp = 0;
-    
+
     const std::string Extension = DirectoryUtil::GetFileExtension(pFilePath);
 
-    assert(Extension != "exr"); // TODO: add exr loading support to Image class
+
+    const bool bEXR = Extension == "exr";
     const bool bHDR = IsHDRFileExtension(Extension);
-    
+
     Image img;
 
     int NumImageComponents = 0;
-    img.pData = bHDR
-        ? (void*)stbi_loadf(pFilePath, &img.x, &img.y, &NumImageComponents, 4)
-        : (void*)stbi_load (pFilePath, &img.x, &img.y, &NumImageComponents, 4);
+    if (bEXR)
+    {
+        int width;
+        int height;
+        const char* err = nullptr;
+        int ret = LoadEXR((float**)&img.pData, &width, &height, pFilePath, &err);
+        if (ret != TINYEXR_SUCCESS) 
+        {
+            if (err) 
+            {
+                Log::Error("Couldn't load EXR file: %s\n", err);
+                FreeEXRErrorMessage(err); // Free error message.
+            }
+        }
+    }
+    else
+    {
+        img.pData = bHDR
+            ? (void*)stbi_loadf(pFilePath, &img.x, &img.y, &NumImageComponents, 4)
+            : (void*)stbi_load(pFilePath, &img.x, &img.y, &NumImageComponents, 4);
+    }
+
     if (img.pData == nullptr)
     {
         Log::Error("Error loading file: %s", pFilePath);

@@ -10,6 +10,8 @@ set (Lib_headers
     "Libs/stb/stb_image_resize.h"
     "Libs/stb/stb_image_write.h"
     "Libs/tinyxml2/tinyxml2.h"
+    "Libs/tinyexr/tinyexr.h"
+    "Libs/miniz/miniz.h"
 )
 
 set (Headers
@@ -29,10 +31,12 @@ set (Source
     "Source/Image.cpp"
     "Source/Timer.cpp"
     "Libs/tinyxml2/tinyxml2.cpp"
+    "Libs/miniz/miniz.c"
 )
 
 source_group("Libs"   FILES ${Lib_headers})
 set_source_files_properties(${Lib_headers} PROPERTIES VS_TOOL_OVERRIDE "Text")
+add_definitions(-DNOMINMAX)
 
 # set ouput directory
 SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_HOME_DIRECTORY}/Bin)
