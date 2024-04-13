@@ -129,6 +129,7 @@ public:
 	
 	inline std::string GetThreadPoolName() const { return mThreadPoolName; }
 	inline std::string GetThreadPoolWorkerName() const { return mThreadPoolName + "_Worker"; }
+	void RunRemainingTasksOnThisThread();
 
 	inline bool IsExiting() const { return mbStopWorkers.load(); }
 

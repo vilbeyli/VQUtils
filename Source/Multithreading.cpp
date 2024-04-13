@@ -16,8 +16,6 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
-#define NOMINMAX
-
 #include "Multithreading.h"
 #include "Utils.h"
 #include "Log.h"
@@ -155,6 +153,15 @@ void ThreadPool::Destroy()
 	}
 }
 
+void ThreadPool::RunRemainingTasksOnThisThread()
+{
+	Task task; 
+	while (mTaskQueue.TryPopTask(task))
+	{ 
+		task(); 
+		mTaskQueue.OnTaskComplete(); 
+	}
+}
 void ThreadPool::Execute()
 {
 	Task task;
