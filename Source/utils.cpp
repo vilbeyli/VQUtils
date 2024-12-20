@@ -282,9 +282,9 @@ namespace DirectoryUtil
 		return bIsImageFile;
 	}
 
-	std::string GetFileNameWithoutExtension(const std::string& path)
+	std::string GetFileNameWithoutExtension(std::string_view path)
 	{	// example: path: "Archetypes/player.txt" | return val: "player"
-		const std::vector<std::string> pathTokens = StrUtil::split(path.c_str(), '.');
+		const std::vector<std::string> pathTokens = StrUtil::split(path.data(), '.');
 #if _DEBUG
 		if (pathTokens.size() == 0)
 		{
