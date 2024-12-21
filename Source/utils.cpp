@@ -263,7 +263,9 @@ namespace DirectoryUtil
 	{
 		const auto tokens = StrUtil::split(pathToFile, '\\', '/');
 		std::string path = "";
-		std::for_each(RANGE(tokens), [&](const std::string& s) { if(s != tokens.back()) path += s + "/"; });
+		if (!tokens.empty())
+			for (int i = 0; i < tokens.size() - 1; ++i)
+				path += tokens[i] + "/";
 		return path;
 	}
 
