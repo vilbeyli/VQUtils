@@ -288,7 +288,7 @@ namespace DirectoryUtil
 #if _DEBUG
 		if (pathTokens.size() == 0)
 		{
-			Log::Warning("Empty tokens: path=" + path);
+			Log::Warning("Empty tokens: path=%s", path);
 		}
 #endif
 		assert(pathTokens.size() > 0);
