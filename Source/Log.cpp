@@ -175,10 +175,10 @@ void InitConsole()
 	}
 }
 
-void Initialize(const LogInitializeParams& params)
+void Initialize(bool bLogConsole, bool bLogFile, std::string_view LogFilePath)
 {
-	if (params.bLogConsole) InitConsole();
-	if (params.bLogFile)    InitLogFile(params.LogFilePath.c_str());
+	if (bLogConsole) InitConsole();
+	if (bLogFile)    InitLogFile(LogFilePath.data());
 
 #if LOG_RUN_UNIT_TEST
 	Log::Info("Test");

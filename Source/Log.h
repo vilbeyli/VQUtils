@@ -19,10 +19,9 @@
 #pragma once
 
 #include <string>
+#include <string_view>
 
 namespace Settings { struct Logger; }
-
-
 
 
 #define VARIADIC_LOG_FN(FN_NAME)\
@@ -48,16 +47,10 @@ namespace Log
 	//---------------------------------------------------------------------------------------------
 
 	constexpr size_t LEN_MSG_BUFFER = 4096;
-	struct LogInitializeParams 
-	{
-		bool bLogConsole        = false;
-		bool bLogFile           = false;
-		std::string LogFilePath = "./";
-	};
 
 	//---------------------------------------------------------------------------------------------
 
-	void Initialize(const LogInitializeParams& params);
+	void Initialize(bool bLogConsole, bool bLogFile, std::string_view LogFilePath);
 	void Destroy();
 
 	void Info(const std::string& s);
