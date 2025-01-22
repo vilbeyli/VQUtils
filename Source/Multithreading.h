@@ -119,7 +119,7 @@ inline void TaskQueue::AddTask(std::shared_ptr<T>& pTask)
 class ThreadPool
 {
 public:
-	const static size_t ThreadPool::sHardwareThreadCount;
+	const static size_t sHardwareThreadCount;
 
 	void Initialize(size_t numWorkers, const std::string& ThreadPoolName, unsigned int MarkerColor = 0xFFAAAAAA);
 	void Destroy();
@@ -164,7 +164,7 @@ auto ThreadPool::AddTask(T task)->std::future<decltype(task())>
 	// e.g. http://en.cppreference.com/w/cpp/thread/packaged_task
 	// 
 	// ------------------------------------------------------------------------------------
-	using typename task_return_t = decltype(task()); // return type of task
+	using task_return_t = decltype(task()); // return type of task
 
 	// use a shared_ptr<> of packaged tasks here as we execute them in the thread pool workers as well
 	// as accesing its get_future() on the thread that calls this AddTask() function.
@@ -276,7 +276,7 @@ inline T ConcurrentQueue<T>::Dequeue()
 	std::lock_guard<std::mutex> lk(mMtx);
 	T item = mQueue.front();
 	mQueue.pop();
-	return T;
+	return item;
 }
 
 template<class T>

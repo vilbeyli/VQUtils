@@ -38,7 +38,7 @@ namespace Log
 {
 using namespace std;
 
-constexpr char* VQ_DEFAULT_LOGFILE_NAME = "VQLog.txt";
+constexpr const char* VQ_DEFAULT_LOGFILE_NAME = "VQLog.txt";
 static std::ofstream sOutFile;
 
 // checks if the specifiec path is only a file name, construct absolute path

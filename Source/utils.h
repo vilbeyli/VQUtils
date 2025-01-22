@@ -23,8 +23,13 @@
 #include <vector>
 #include <locale>
 #include <codecvt>
+#include <utility>
+#include <algorithm>
 
 #if _WIN32
+	#ifndef NOMINMAX
+	#define NOMINMAX
+	#endif
 	#include "Windows.h"
 #endif
 
@@ -131,8 +136,6 @@ std::string GetCurrentTimeAsString();
 std::string GetCurrentTimeAsStringWithBrackets();
 
 
-
-#include <utility>
 namespace MathUtil
 {
 	template<class T> inline T lerp(T low, T high, float t) { return low + static_cast<T>((high - low) * t); }
