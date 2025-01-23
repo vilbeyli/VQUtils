@@ -23,6 +23,8 @@
 #include <cassert>
 #include <algorithm>
 
+#include <Windows.h>
+
 #define RUN_THREADPOOL_UNIT_TEST 0
 
 

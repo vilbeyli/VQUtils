@@ -26,17 +26,11 @@
 #include <utility>
 #include <algorithm>
 
-#if _WIN32
-	#ifndef NOMINMAX
-	#define NOMINMAX
-	#endif
-	#include "Windows.h"
-#endif
-
 #define RANGE(c)  std::begin(c) , std::end(c)
 #define RRANGE(c) std::rbegin(c), std::rend(c)
 
-
+using WCHAR = wchar_t;
+using PWSTR = wchar_t*;
 
 namespace StrUtil
 {
