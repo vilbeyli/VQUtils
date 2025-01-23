@@ -66,6 +66,7 @@ namespace StrUtil
 	       std::string  UnicodeToASCII(const PWSTR pwstr); // https://codingtidbit.com/2020/02/09/c17-codecvt_utf8-is-deprecated/
 	//inline std::string  UnicodeToASCII(const std::wstring& wstr) { return UnicodeToASCII(wstr.c_str()); }
 	inline std::wstring ASCIIToUnicode(const std::string& str) { return std::wstring(str.begin(), str.end()); }
+	inline std::wstring ASCIIToUnicode(const char* str) { return std::wstring(str, str + strlen(str)); }
 
 	template<unsigned STR_SIZE>
 	std::string UnicodeToASCII(const WCHAR wchars[STR_SIZE])
