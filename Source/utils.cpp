@@ -87,10 +87,10 @@ namespace StrUtil
 		return split(str.c_str(), c);
 	}
 
-	std::vector<std::string> split(const std::string & s, const std::vector<char>& delimiters)
+	std::vector<std::string> split(std::string_view s, const std::vector<char>& delimiters)
 	{
 		vector<string> result;
-		const char* ps = s.c_str();
+		const char* ps = s.data();
 		auto& IsDelimiter = [&delimiters](const char c)
 		{
 			return std::find(delimiters.begin(), delimiters.end(), c) != delimiters.end();

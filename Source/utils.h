@@ -19,6 +19,7 @@
 #pragma once
 
 #include <string>
+#include <string_view>
 #include <sstream>
 #include <vector>
 #include <locale>
@@ -42,12 +43,14 @@ namespace StrUtil
 
 	std::vector<std::string> split(const char* s, char c = ' ');
 	std::vector<std::string> split(const std::string& s, char c = ' ');
-	std::vector<std::string> split(const std::string& s, const std::vector<char>& delimiters);
-	template<class... Args> std::vector<std::string> split(const std::string& s, Args&&... args)
+	std::vector<std::string> split(std::string_view s, const std::vector<char>& delimiters);
+	template<class... Args>
+	std::vector<std::string> split(std::string_view s, Args&&... args)
 	{
-		const std::vector<char> delimiters = { args... };
+		const std::vector<char> delimiters = { std::forward<Args>(args)... };
 		return split(s, delimiters);
 	}
+
 	std::string trim(const std::string& s);
 
 	void MakeLowercase(std::string& str);

@@ -54,7 +54,7 @@ std::string ParseAndValidateArgument(const char* pStrFilePath)
 	const bool bNoFilePathProvided = LogFileDir.empty();
 
 	const std::vector<std::string> LogFileDirTokens = StrUtil::split(LogFileDir, { '/', '\\' });
-	const std::string& root = LogFileDirTokens[0];
+	std::string_view root = LogFileDirTokens[0];
 	const bool bOnlyFilenameProvided = LogFileDirTokens.size() == 1;
 	const bool bAbsolutePathProvided = root[1] == ':' && (root[2] == '/' || root[2] == '\\');
 	
@@ -78,19 +78,20 @@ std::string ParseAndValidateArgument(const char* pStrFilePath)
 	return FinalAbsolutePath;
 }
 
-void CreateFolderHierarchy(const std::string& logfileDir, std::string& errMsg)
+void CreateFolderHierarchy(std::string_view logfileDir, std::string& errMsg)
 {
 	assert(errMsg.size() == 0);
-	std::vector<std::string> folders = StrUtil::split(logfileDir, {'/', '\\'});
+	std::vector<std::string> folders = StrUtil::split(logfileDir, '/', '\\');
 	const std::string root = folders[0];
 
 	assert(folders.size() > 1); // assume a root path like 'C:/' is not given
 	folders = std::vector<std::string>(folders.begin() + 1, folders.end());
 
 	std::string folderAbsolutePath = root + "/";
-	for (const std::string& folder : folders)
+	for (std::string_view folder : folders)
 	{
-		folderAbsolutePath += folder + "/";
+		folderAbsolutePath += folder;
+		folderAbsolutePath += "/";
 		if (CreateDirectory(folderAbsolutePath.c_str(), NULL) || ERROR_ALREADY_EXISTS == GetLastError())
 		{
 
@@ -199,10 +200,12 @@ void Destroy()
 	OutputDebugString(msg.c_str());
 }
 
-void Error(const std::string & s)
+void Error(std::string_view s)
 {
-	std::string err = GetCurrentTimeAsStringWithBrackets() + "  [ERROR]\t: ";
-	err += s + "\n";
+	std::string err = GetCurrentTimeAsStringWithBrackets();
+	err += "  [ERROR]\t: ";
+	err += s;
+	err += "\n";
 	
 	OutputDebugString(err.c_str());		// vs
 	if (sOutFile.is_open()) 
@@ -210,10 +213,12 @@ void Error(const std::string & s)
 	cout << err;						// console
 }
 
-void Warning(const std::string & s)
+void Warning(std::string_view s)
 {
-	std::string warn = GetCurrentTimeAsStringWithBrackets() + "[WARNING]\t: ";
-	warn += s + "\n";
+	std::string warn = GetCurrentTimeAsStringWithBrackets();
+	warn += "  [WARNING]\t: ";
+	warn += s;
+	warn += "\n";
 	
 	OutputDebugString(warn.c_str());
 	if (sOutFile.is_open()) 
@@ -221,9 +226,12 @@ void Warning(const std::string & s)
 	cout << warn;
 }
 
-void Info(const std::string & s)
+void Info(std::string_view s)
 {
-	std::string info = GetCurrentTimeAsStringWithBrackets() + "   [INFO]\t: " + s + "\n";
+	std::string info = GetCurrentTimeAsStringWithBrackets();
+	info += "   [INFO]\t: ";
+	info += s;
+	info += "\n";
 	OutputDebugString(info.c_str());
 	
 	if (sOutFile.is_open()) 

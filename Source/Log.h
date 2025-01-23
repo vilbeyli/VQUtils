@@ -18,7 +18,6 @@
 
 #pragma once
 
-#include <string>
 #include <string_view>
 
 namespace Settings { struct Logger; }
@@ -30,7 +29,7 @@ void FN_NAME(const char* format, Args&&... args)\
 {\
 	char msg[LEN_MSG_BUFFER];\
 	sprintf_s(msg, format, args...);\
-	##FN_NAME(std::string(msg));\
+	##FN_NAME(std::string_view(msg));\
 }
 
 namespace Log
@@ -53,9 +52,9 @@ namespace Log
 	void Initialize(bool bLogConsole, bool bLogFile, std::string_view LogFilePath);
 	void Destroy();
 
-	void Info(const std::string& s);
-	void Error(const std::string& s);
-	void Warning(const std::string& s);
+	void Info(std::string_view s);
+	void Error(std::string_view s);
+	void Warning(std::string_view s);
 	
 	VARIADIC_LOG_FN(Error)
 	VARIADIC_LOG_FN(Warning)
