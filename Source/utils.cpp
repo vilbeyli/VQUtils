@@ -30,6 +30,15 @@
 #endif
 
 #ifdef _WIN32
+#ifndef VC_EXTRALEAN
+#define VC_EXTRALEAN
+#endif
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
 #include <windows.h>
 #include "shlobj.h"		// SHGetKnownFolderPath()
 #endif
