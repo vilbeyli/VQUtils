@@ -23,6 +23,7 @@
 #include <queue>
 #include <future>
 #include <atomic>
+#include <cassert>
 
 // utility function for checking if a std::future<> is ready without blocking
 template<typename R> bool is_ready(std::future<R> const& f) { return f.wait_for(std::chrono::seconds(0)) == std::future_status::ready; }
@@ -36,7 +37,7 @@ template<typename R> bool is_ready(std::future<R> const& f) { return f.wait_for(
 // 
 // Wraps a std::conditional_variable with a std::mutex
 //
-class Signal
+class EventSignal
 {
 public:
 	inline void NotifyOne() { cv.notify_one(); };
@@ -50,6 +51,58 @@ public:
 private:
 	std::mutex mtx;
 	std::condition_variable cv;
+};
+
+
+// TaskSignal w/ data support
+template<typename T>
+class TaskSignal
+{
+public:
+	TaskSignal() : promise(), future(promise.get_future()) {}
+
+	// Deleted copy/move to prevent misuse (promise/future can't be copied)
+	TaskSignal(const TaskSignal&) = delete;
+	TaskSignal& operator=(const TaskSignal&) = delete;
+	TaskSignal(TaskSignal&&) = delete;  // implement if needed
+	TaskSignal& operator=(TaskSignal&&) = delete;
+
+	inline void Notify(T&& value) { promise.set_value(std::forward<T>(value)); }
+	inline T Wait() { assert(future.valid()); return future.get(); }
+	inline bool IsReady() const { return is_ready(future); }
+	inline void Reset() 
+	{  
+		promise = std::promise<T>();
+		future = promise.get_future();
+	}
+
+private:
+	std::promise<T> promise; // signal ready
+	std::future<T> future;   // wait signal
+};
+
+template<>
+class TaskSignal<void>
+{
+public:
+	TaskSignal() : promise(), future(promise.get_future()) {}
+	TaskSignal(const TaskSignal&) = delete;
+	TaskSignal& operator=(const TaskSignal&) = delete;
+	TaskSignal(TaskSignal&&) = delete;  // implement if needed
+	TaskSignal& operator=(TaskSignal&&) = delete;
+
+	inline void Notify() { promise.set_value(); }
+	inline void Wait() { assert(future.valid()); future.get(); }
+	inline bool IsReady() const { return is_ready(future); }
+	inline void Reset()
+	{
+		promise = std::promise<void>();
+		future = promise.get_future();
+	}
+
+private:
+	std::promise<void> promise; // signal ready
+	std::future<void> future;   // wait signal
 };
 
 //
@@ -142,7 +195,7 @@ public:
 private:
 	void Execute(); // workers run Execute();
 
-	Signal                   mSignal;
+	EventSignal                   mSignal;
 	std::atomic<bool>        mbStopWorkers;
 	TaskQueue                mTaskQueue;
 	std::vector<std::thread> mWorkers;
@@ -173,7 +226,7 @@ auto ThreadPool::AddTask(T task)->std::future<decltype(task())>
 	//Log::Info("[%s] TaskQueue::AddTask()", this->mThreadPoolName.c_str());
 
 	mSignal.NotifyOne();
-	//Log::Info("[%s] Signal::NotifyOne()", this->mThreadPoolName.c_str());
+	//Log::Info("[%s] EventSignal::NotifyOne()", this->mThreadPoolName.c_str());
 	return pTask->get_future();
 }
 
