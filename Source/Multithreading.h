@@ -54,7 +54,7 @@ private:
 };
 
 
-// TaskSignal w/ data support
+// TaskSignal is a one time sync object, designed to be used with async tasks that return any type T.
 template<typename T>
 class TaskSignal
 {
@@ -64,7 +64,7 @@ public:
 	// Deleted copy/move to prevent misuse (promise/future can't be copied)
 	TaskSignal(const TaskSignal&) = delete;
 	TaskSignal& operator=(const TaskSignal&) = delete;
-	TaskSignal(TaskSignal&&) = delete;  // implement if needed
+	TaskSignal(TaskSignal&& other) noexcept : promise(std::move(other.promise)), future(std::move(other.future)) {}
 	TaskSignal& operator=(TaskSignal&&) = delete;
 
 	inline void Notify(T&& value) { promise.set_value(std::forward<T>(value)); }
@@ -81,6 +81,8 @@ private:
 	std::future<T> future;   // wait signal
 };
 
+// void TaskSignal is a signal without any data attached -- used just for syncing instead of forwarding 
+// any results from an async task.
 template<>
 class TaskSignal<void>
 {
@@ -88,7 +90,7 @@ public:
 	TaskSignal() : promise(), future(promise.get_future()) {}
 	TaskSignal(const TaskSignal&) = delete;
 	TaskSignal& operator=(const TaskSignal&) = delete;
-	TaskSignal(TaskSignal&&) = delete;  // implement if needed
+	TaskSignal(TaskSignal&& other) noexcept : promise(std::move(other.promise)), future(std::move(other.future)) {}
 	TaskSignal& operator=(TaskSignal&&) = delete;
 
 	inline void Notify() { promise.set_value(); }
