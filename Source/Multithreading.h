@@ -67,6 +67,7 @@ public:
 	TaskSignal(TaskSignal&& other) noexcept : promise(std::move(other.promise)), future(std::move(other.future)) {}
 	TaskSignal& operator=(TaskSignal&&) = delete;
 
+	inline void Notify(const T& value) { promise.set_value(value); }
 	inline void Notify(T&& value) { promise.set_value(std::forward<T>(value)); }
 	inline T Wait() { assert(future.valid()); return future.get(); }
 	inline bool IsReady() const { return is_ready(future); }
