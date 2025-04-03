@@ -158,8 +158,15 @@ void ThreadPool::Destroy()
 
 	mSignal.NotifyAll();
 
-	for (auto& worker : mWorkers)
+	
+	for (size_t iThread = 0; iThread < mWorkers.size(); ++iThread)
 	{
+		std::thread& worker = mWorkers[iThread];
+		if (!worker.joinable())
+		{
+			Log::Info("%s : Thread[%d] is not joinable", mThreadPoolName.c_str(), iThread);
+			continue;
+		}
 		worker.join();
 	}
 }
@@ -177,7 +184,7 @@ void ThreadPool::Execute()
 {
 	Task task;
 
-	while (!mbStopWorkers)
+	while (!mbStopWorkers.load())
 	{
 		mSignal.Wait([&] { return mbStopWorkers || !mTaskQueue.IsQueueEmpty(); });
 
@@ -208,9 +215,8 @@ bool TaskQueue::TryPopTask(Task& task)
 	if (queue.empty())
 		return false;
 	
-	task = std::move(queue.front());
+	task = std::move(queue.top().task);
 	queue.pop();
-
 	return true;
 }
 
