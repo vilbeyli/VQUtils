@@ -15,23 +15,27 @@ set (Lib_headers
 )
 
 set (Headers
-    "Source/Log.h"
-    "Source/utils.h"
-    "Source/Multithreading.h"
-    "Source/SystemInfo.h"
-    "Source/Image.h"
-    "Source/Timer.h"
+    "Include/Log.h"
+    "Include/utils.h"
+    "Include/Multithreading/Multithreading.h"
+    "Include/SystemInfo.h"
+    "Include/Image.h"
+    "Include/Timer.h"
 )
 
 set (Source
     "Source/Log.cpp"
     "Source/utils.cpp"
-    "Source/Multithreading.cpp"
+    "Source/Multithreading/Multithreading.cpp"
     "Source/SystemInfo.cpp"
     "Source/Image.cpp"
     "Source/Timer.cpp"
     "Libs/tinyxml2/tinyxml2.cpp"
     "Libs/miniz/miniz.c"
+)
+
+set (IncludeDirs 
+    "Include/"
 )
 
 source_group("Libs"   FILES ${Lib_headers})
@@ -50,3 +54,5 @@ endforeach( OUTPUTCONFIG CMAKE_CONFIGURATION_TYPES )
 add_link_options(/SUBSYSTEM:WINDOWS)
 
 add_library(${PROJECT_NAME} STATIC ${Headers} ${Source} ${Lib_headers})
+
+target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${IncludeDirs})
