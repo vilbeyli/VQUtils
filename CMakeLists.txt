@@ -17,16 +17,21 @@ set (Lib_headers
 set (Headers
     "Include/Log.h"
     "Include/utils.h"
-    "Include/Multithreading/Multithreading.h"
     "Include/SystemInfo.h"
     "Include/Image.h"
     "Include/Timer.h"
+    "Include/Multithreading/ConcurrentQueue.h"
+    "Include/Multithreading/BufferedContainer.h"
+    "Include/Multithreading/EventSignal.h"
+    "Include/Multithreading/Semaphore.h"
+    "Include/Multithreading/TaskSignal.h"
+    "Include/Multithreading/ThreadPool.h"
 )
 
 set (Source
     "Source/Log.cpp"
     "Source/utils.cpp"
-    "Source/Multithreading/Multithreading.cpp"
+    "Source/Multithreading/ThreadPool.cpp"
     "Source/SystemInfo.cpp"
     "Source/Image.cpp"
     "Source/Timer.cpp"
