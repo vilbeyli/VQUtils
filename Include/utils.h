@@ -20,13 +20,11 @@
 
 #include <string>
 #include <string_view>
-#include <sstream>
 #include <vector>
-#include <locale>
 #include <codecvt>
 #include <utility>
-#include <algorithm>
 
+// TODO: dont pollute global namespace
 #define RANGE(c)  std::begin(c) , std::end(c)
 #define RRANGE(c) std::rbegin(c), std::rend(c)
 
@@ -37,9 +35,9 @@ namespace StrUtil
 {
 	bool IsNumber(const std::string& s);
 
-	inline bool  ParseBool (const std::string& s) { bool b; std::istringstream(s) >> std::boolalpha >> b; return b; }
-	inline int   ParseInt  (const std::string& s) { return std::atoi(s.c_str()); }
-	inline float ParseFloat(const std::string& s) { return static_cast<float>(std::atof(s.c_str())); }
+	bool  ParseBool (const std::string& s);
+	int   ParseInt  (const std::string& s);
+	float ParseFloat(const std::string& s);
 
 	std::vector<std::string> split(const char* s, char c = ' ');
 	std::vector<std::string> split(const std::string& s, char c = ' ');

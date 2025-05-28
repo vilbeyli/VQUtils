@@ -64,6 +64,10 @@ namespace StrUtil
 	using std::cout;
 	using std::endl;
 
+	bool  ParseBool (const std::string& s) { bool b; std::istringstream(s) >> std::boolalpha >> b; return b; }
+	int   ParseInt  (const std::string& s) { return std::atoi(s.c_str()); }
+	float ParseFloat(const std::string& s) { return static_cast<float>(std::atof(s.c_str())); }
+	
 	bool IsNumber(const std::string& s)
 	{
 		// https://stackoverflow.com/a/4654718/2034041
