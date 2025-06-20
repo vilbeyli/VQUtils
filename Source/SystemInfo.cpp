@@ -448,91 +448,93 @@ static inline int ComputeIntersectionArea(int ax1, int ay1, int ax2, int ay2, in
 	return std::max(0, std::min(ax2, bx2) - std::max(ax1, bx1)) * std::max(0, std::min(ay2, by2) - std::max(ay1, by1));
 }
 
-std::vector<FMonitorInfo> GetDisplayInfo()
+// Callback for EnumDisplayMonitors
+static BOOL CALLBACK MonitorEnumProc(HMONITOR hMonitor, HDC hdcMonitor, LPRECT lprcMonitor, LPARAM dwData)
 {
-	std::vector<FMonitorInfo> monitors;
+	std::vector<FMonitorInfo>& monitors = *reinterpret_cast<std::vector<FMonitorInfo>*>(dwData);
+	FMonitorInfo monitorInfo = {};
 
-	auto fnFindBestMode = [](const std::vector<FMonitorInfo::FMode>& modes)
+	// Get monitor information
+	MONITORINFOEXA mi = {};
+	mi.cbSize = sizeof(MONITORINFOEXA);
+	if (GetMonitorInfoA(hMonitor, &mi))
 	{
-		FMonitorInfo::FMode bestMode = {};
+		// Store logical device name (e.g., "\\.\DISPLAY1")
+		monitorInfo.LogicalDeviceName = mi.szDevice;
 
-		// find highest supported refresh rate
-		for (const FMonitorInfo::FMode& mode : modes)
-			if (mode.RefreshRate > bestMode.RefreshRate) 
-				bestMode.RefreshRate = mode.RefreshRate;
-
-		// find the highest resolution supported by the highest refresh rate
-		for (const FMonitorInfo::FMode& mode : modes)
+		// Get display device information
+		DISPLAY_DEVICEA dd = {};
+		dd.cb = sizeof(DISPLAY_DEVICEA);
+		if (EnumDisplayDevicesA(mi.szDevice, 0, &dd, 0))
 		{
-			if (mode.RefreshRate != bestMode.RefreshRate)
-				continue;
-			if (bestMode.Resolution.Width <= mode.Resolution.Width && bestMode.Resolution.Height <= mode.Resolution.Height)
-				bestMode.Resolution = mode.Resolution;
+			monitorInfo.DeviceName = dd.DeviceString; // Monitor name (e.g., "Dell U2723QE")
+			monitorInfo.DeviceID = dd.DeviceID;
 		}
 
-		// this isn't very good. the 4K@60Hz monitor can return a 75Hz mode that isn't 4K.
-		return bestMode;
-	};
+		// Store native resolution
+		monitorInfo.NativeResolution.Width = mi.rcMonitor.right - mi.rcMonitor.left;
+		monitorInfo.NativeResolution.Height = mi.rcMonitor.bottom - mi.rcMonitor.top;
 
-	//
-	// Get supported modes (refresh rate + resolution)
-	//
-	// https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-enumdisplaydevicesa
-	int iDevNum = 0;
-	DISPLAY_DEVICE device_interface = {};
-	device_interface.cb = sizeof(DISPLAY_DEVICE);
-	while (EnumDisplayDevices(NULL, iDevNum, &device_interface, EDD_GET_DEVICE_INTERFACE_NAME))
-	{
-		// we're only interested in attached displays
-		if (!(device_interface.StateFlags & DISPLAY_DEVICE_ATTACHED_TO_DESKTOP)) { ++iDevNum; continue; }
-
-		DISPLAY_DEVICEA device = {};
-		device.cb = sizeof(DISPLAY_DEVICEA);
-		EnumDisplayDevices(device_interface.DeviceName, 0, &device, 0);
-
-		FMonitorInfo i = {};
-
-		int iModeNum = 0;
-		DEVMODEA mode;
-		FMonitorInfo::FMode highestMode = { };
-		highestMode.RefreshRate = 0;
-		highestMode.Resolution = { 0, 0 };
-		while (EnumDisplaySettings(device_interface.DeviceName, iModeNum, &mode))
+		// Get supported modes
+		DEVMODEA dm = {};
+		dm.dmSize = sizeof(DEVMODEA);
+		int modeIndex = 0;
+		while (EnumDisplaySettingsA(mi.szDevice, modeIndex++, &dm))
 		{
-			FMonitorInfo::FMode fmode;
-			fmode.RefreshRate = mode.dmDisplayFrequency;
-			fmode.Resolution.Width = mode.dmPelsWidth;
-			fmode.Resolution.Height = mode.dmPelsHeight;
-			i.SupportedModes.push_back(fmode);
-			++iModeNum;
+			FMonitorInfo::FMode mode = {};
+			mode.Resolution.Width = dm.dmPelsWidth;
+			mode.Resolution.Height = dm.dmPelsHeight;
+			mode.RefreshRate = dm.dmDisplayFrequency;
+			monitorInfo.SupportedModes.push_back(mode);
 		}
 
-		
-		if constexpr (DISPLAY_DEVICE_NAME__USE_DISPLAY_INFO_API)
+		// Find highest mode
+		monitorInfo.HighestMode = [&]()
 		{
-			// TODO: figure out how to use the UWP library
-			//Windows::Devices::Display::DisplayMonitor;
-		}
-		else
-		{
-			i.DeviceName = device.DeviceName;
-		}
+			FMonitorInfo::FMode bestMode = {};
+			for (const auto& mode : monitorInfo.SupportedModes)
+			{
+				if (mode.RefreshRate > bestMode.RefreshRate)
+					bestMode.RefreshRate = mode.RefreshRate;
+			}
+			for (const auto& mode : monitorInfo.SupportedModes)
+			{
+				if (mode.RefreshRate == bestMode.RefreshRate &&
+					mode.Resolution.Width >= bestMode.Resolution.Width &&
+					mode.Resolution.Height >= bestMode.Resolution.Height)
+				{
+					bestMode.Resolution = mode.Resolution;
+				}
+			}
+			return bestMode;
+		}();
 
-		i.DeviceID = device.DeviceID;
-
-		i.HighestMode = fnFindBestMode(i.SupportedModes);
-
-		monitors.push_back(i);
-		++iDevNum;
+		monitors.push_back(monitorInfo);
 	}
 
+	return TRUE;
+}
+std::vector<FMonitorInfo> GetDisplayInfo()
+{
+	// Step 1: Enumerate monitors using EnumDisplayMonitors
+	std::vector<FMonitorInfo> monitors;
+	EnumDisplayMonitors(NULL, NULL, MonitorEnumProc, reinterpret_cast<LPARAM>(&monitors));
+
+	// Step 2: Use DXGI to get HDR support and other advanced properties
+	HRESULT hr = S_OK;
+	Microsoft::WRL::ComPtr<IDXGIFactory6> dxgiFactory;
+	UINT dxgiFlags = 0;
+	hr = CreateDXGIFactory2(dxgiFlags, IID_PPV_ARGS(&dxgiFactory));
+	if (FAILED(hr))
+	{
+		// Handle error (e.g., log and return monitors without DXGI info)
+		return monitors;
+	}
 
 	//
 	// Get Native Resolution, rotation degrees, etc.
 	//
 	const bool bEnumerateSoftwareAdapters = false;
-
-	HRESULT hr = {};
 
 	IDXGIAdapter1* pAdapter = nullptr; // adapters are the graphics card (this includes the embedded graphics on the motherboard)
 	int iAdapter = 0;                  // we'll start looking for DX12  compatible graphics devices starting at index 0
@@ -596,29 +598,7 @@ std::vector<FMonitorInfo> GetDisplayInfo()
 			}(desc, monitors);
 
 			i.LogicalDeviceName = StrUtil::UnicodeToASCII(desc.DeviceName);
-			if constexpr (DISPLAY_DEVICE_NAME__READ_REGISTRY)
-			{
-				constexpr const char* DISPLAY_NAME_ENUMS_REGISTRY_PATH_FROM_HKEY_LOCAL_MACHINE = "SYSTEM\\CurrentControlSet\\Enum\\DISPLAY";
-				// Here in the registry root, we'll see part of device.DisplayID as folders, e.g.
-				// DisplayID is generated per driver version, and look like: MONITOR\\ACR0414\\<driver hash>
-				// Hence, we'll see monitor identifiers as folders like:
-				// - ACR0414 - Acer ...
-				// - DELA0DC - Dell ...
-				// - DELA0EA - Dell ...
-				std::vector<std::string> tokens = StrUtil::split(i.DeviceID, '\\');
-				assert(tokens.size() >= 4);
-				const std::string& MONITOR = tokens[0];           // "MONIOTOR"
-				const std::string& MonitorCode = tokens[1];       // "ACR0414"
-				const std::string& DriverHash = tokens[2];        // <driver hash:base>
-				const std::string& DriverVersionHash = tokens[3]; // <driver hash:version>
-				const std::string DisplayDriverHashCombinationToMatch = DriverHash + "\\" + DriverVersionHash; // essentially recreate the <driver hash>
 
-				const std::string RegistryPath_MonitorCode = DISPLAY_NAME_ENUMS_REGISTRY_PATH_FROM_HKEY_LOCAL_MACHINE + std::string("\\") + MonitorCode + std::string("\\");
-				FindAndDecodeEDID(RegistryPath_MonitorCode, DisplayDriverHashCombinationToMatch, i.DeviceName);
-
-				// Finally, EDID string might contain newlines and spaces after the string ends so process it here
-				i.DeviceName = StrUtil::trim(i.DeviceName);
-			}
 			switch (desc.Rotation)
 			{
 			case DXGI_MODE_ROTATION_IDENTITY   : i.RotationDegrees = 0; break;
